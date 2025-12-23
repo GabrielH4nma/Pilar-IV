@@ -39,32 +39,26 @@ data class Email(
 )
 
 object GameData {
-    // ESTADOS GLOBAIS
+    // --- ESTADOS GLOBAIS ---
     var isBankHacked = false
     var isSecretPhotoRevealed = false
     var isSiteCamInstalled = mutableStateOf(false)
     var hasShownSiteCamAnimation = mutableStateOf(false)
-
-    // MyTrack está sempre disponível
     var isMyTrackInstalled = mutableStateOf(true)
-
-    // A gravação do percurso suspeito começa bloqueada
     var isTrackerRecordingUnlocked = mutableStateOf(false)
-
     var isTrackerActive = mutableStateOf(false)
     var trackerSequenceFinished = mutableStateOf(false)
-
     var hasReadGhostEmail = mutableStateOf(false)
     var isGameFinished = mutableStateOf(false)
 
-    // VARIÁVEIS DE NAVEGAÇÃO FORÇADA E ASSOMBRAÇÃO (Adicionadas novamente)
+    // VARIÁVEIS DE NAVEGAÇÃO FORÇADA E ASSOMBRAÇÃO
     var showHauntedMarks = mutableStateOf(false)
     var triggerForcedNavigation = mutableStateOf(false)
     var isHauntedPlaybackActive = mutableStateOf(false)
 
-    // GATILHOS
+    // GATILHOS DE EVENTOS ÚNICOS
     var hasTriggeredBankReaction = false
-    var hasTriggeredGalleryReaction = false
+    // hasTriggeredGalleryReaction REMOVIDO
     var hasTriggeredUnknownHint = false
 
     var showNotificationPopup = mutableStateOf(false)
@@ -73,9 +67,7 @@ object GameData {
     val emails = mutableStateListOf<Email>()
     val capturedEvidence = mutableStateListOf<Int>()
 
-    fun installMyTrack() { }
-
-    // Função para desbloquear a gravação
+    // Função para desbloquear a gravação (chamada pelo Tiago)
     fun unlockTrackerRecording() {
         if (!isTrackerRecordingUnlocked.value) {
             isTrackerRecordingUnlocked.value = true
@@ -85,8 +77,7 @@ object GameData {
     }
 
     val contacts = mutableStateListOf(
-        // --- RICARDO: CRONOLOGIA CORRIGIDA ---
-        // A última mensagem da Sofia tem de ser às 22:31 (PIN)
+        // --- RICARDO (PIN: 2231) ---
         ContactProfile(
             id = "ricardo",
             name = "Ricardo ❤️",
@@ -98,18 +89,14 @@ object GameData {
                 Message(content = "Estás a olhar para as paredes outra vez? Vem para a cama.", isFromPlayer = false, timestamp = "Domingo 21:00"),
                 Message(content = "Não são as paredes, Ricardo. É o que está dentro delas.", isFromPlayer = true, timestamp = "Domingo 21:05"),
                 Message(content = "Atende o telemóvel.", isFromPlayer = false, timestamp = "Domingo 22:30"),
-
-                // O PIN (2231) - Última mensagem enviada por ela
+                // O PIN (2231)
                 Message(content = "Já disse que não vou assinar nada. Pára de insistir.", isFromPlayer = true, timestamp = "Domingo 22:31"),
-
-                // O Silêncio
                 Message(content = "Onde estás?", isFromPlayer = false, timestamp = "Domingo 23:15"),
                 Message(content = "Estou a ficar preocupado.", isFromPlayer = false, timestamp = "Ontem 09:00")
-            ),
-            startNodeId = null
+            )
         ),
 
-        // --- TIAGO ---
+        // --- TIAGO (O INFORMANTE) ---
         ContactProfile(
             id = "tiago",
             name = "Tiago Eng. (Antigo Colega)",
@@ -126,8 +113,7 @@ object GameData {
                 Message(content = "Se o teu coração parar ou o sinal GPS for para onde não deve... fica a prova na cloud. É o teu seguro de vida.", isFromPlayer = false, timestamp = "Ontem 18:08"),
                 Message(content = "Ok. Vou ativar agora.", isFromPlayer = true, timestamp = "Ontem 18:10"),
                 Message(content = "Apaga esta conversa. Se eu não disser nada amanhã, foge.", isFromPlayer = false, timestamp = "Ontem 18:12")
-            ),
-            startNodeId = null
+            )
         ),
 
         // --- MÃE ---
@@ -142,8 +128,7 @@ object GameData {
                 Message(content = "Tu tens de parar com essa ideia da 'geometria errada'. É só um prédio, filha.", isFromPlayer = false, timestamp = "2 dias atrás"),
                 Message(content = "Não vás à obra à noite. Tu sabes o que acontece quando ficas sem dormir.", isFromPlayer = false, timestamp = "Ontem 09:00"),
                 Message(content = "Liga-me.", isFromPlayer = false, timestamp = "Ontem 09:30")
-            ),
-            startNodeId = null // Sem interação inicial
+            )
         ),
 
         // --- CHEFE ---
@@ -155,8 +140,7 @@ object GameData {
                 Message(content = "Recebi o teu relatório sobre o 'som'.", isFromPlayer = false, timestamp = "Sexta 14:00"),
                 Message(content = "Sofia, betão não grita. Tira uns dias de folga.", isFromPlayer = false, timestamp = "Sexta 14:05"),
                 Message(content = "Se voltares a assustar os investidores com histórias de fantasmas, estás despedida.", isFromPlayer = false, timestamp = "Ontem 10:00")
-            ),
-            startNodeId = null
+            )
         ),
 
         // --- DESCONHECIDO ---
@@ -183,8 +167,6 @@ object GameData {
 
     // --- ÁRVORES DE DIÁLOGO ---
     private val dialogueTrees = mapOf(
-
-        // --- RICARDO - REAÇÃO AO BANCO ---
         "ricardo_bank_hack" to DialogueNode(
             id = "ricardo_bank_hack",
             npcMessages = emptyList(),
@@ -203,46 +185,24 @@ object GameData {
             npcMessages = listOf("Não te faças de parva.", "Hipnoterapia Regressiva? 'Limpeza de Memória'?", "Tu disseste que precisavas de esquecer o que viste na Cave.", "Mas só ficaste pior."),
             options = emptyList()
         ),
-
-        // --- MÃE - REAÇÃO À GALERIA ---
-        "mae_stalker_found" to DialogueNode(
-            id = "mae_stalker_found",
-            npcMessages = emptyList(),
-            options = listOf(
-                ReplyOption("Não estava vazio. Havia um homem de casaco vermelho.", "mae_stalker_red"),
-                ReplyOption("Eu... não me lembro de nada.", "mae_stalker_forgot")
-            )
-        ),
-        "mae_stalker_red" to DialogueNode(
-            id = "mae_stalker_red",
-            npcMessages = listOf("Sofia...", "O vizinho gravou um vídeo. Não estava lá ninguém.", "Tu estás a ver coisas outra vez.", "O casaco vermelho... era o casaco que o teu avô usava quando morreu. Lembras-te?"),
-            options = emptyList()
-        ),
-        "mae_stalker_forgot" to DialogueNode(
-            id = "mae_stalker_forgot",
-            npcMessages = listOf("Vou ligar ao Dr. Luz.", "A medicação tem de ser ajustada.", "Tu disseste que as paredes estavam a respirar. Isso não é real."),
-            options = emptyList()
-        ),
-
-        // --- CHEFE - FINAL ---
+        // NÓS DA MÃE STALKER REMOVIDOS
         "chefe_start" to DialogueNode(id = "chefe_start", npcMessages = emptyList(), options = listOf(ReplyOption("Vou entregar o relatório.", null)))
     )
 
     fun getContact(id: String): ContactProfile? = contacts.find { it.id == id }
     fun getDialogueNode(nodeId: String): DialogueNode? = dialogueTrees[nodeId]
 
-    // GATILHO 1: BANCO (RICARDO - 10s)
+    // --- FUNÇÕES DE GATILHO (TRIGGERS) ---
+
     fun triggerRicardoBankReaction() {
         if (!isBankHacked) {
-            isBankHacked = true // Marca que o hack começou
+            isBankHacked = true
         }
-
         if (!hasTriggeredBankReaction) {
             val ricardo = getContact("ricardo")
             if (ricardo != null) {
                 ricardo.history.add(Message(content = "Vi a notificação do banco. Estás a gastar dinheiro outra vez? Diz-me que não foi para aquela 'Clínica'.", isFromPlayer = false, timestamp = "Agora"))
                 ricardo.currentNodeId = "ricardo_bank_hack"
-
                 notificationContent.value = "Ricardo: Vi a notificação..."
                 showNotificationPopup.value = true
                 hasTriggeredBankReaction = true
@@ -250,14 +210,12 @@ object GameData {
         }
     }
 
-    // GATILHO 2: BANCO (DESCONHECIDO - 20s)
     fun triggerUnknownBankHint() {
         if (!hasTriggeredUnknownHint) {
             val unknownContact = getContact("desconhecido")
             if (unknownContact != null) {
                 unknownContact.history.add(Message(content = "O dinheiro compra silencio mas nao compra a paz.", isFromPlayer = false, timestamp = "Agora"))
                 unknownContact.history.add(Message(content = "A verdade está na Galeria, a chave reside no ultimo adeus.", isFromPlayer = false, timestamp = "Agora"))
-
                 notificationContent.value = "Desconhecido: A verdade está na Galeria..."
                 showNotificationPopup.value = true
                 hasTriggeredUnknownHint = true
@@ -265,20 +223,7 @@ object GameData {
         }
     }
 
-    // GATILHO 3: GALERIA
-    fun triggerGalleryStalkerEvent() {
-        if (!hasTriggeredGalleryReaction) {
-            val mae = getContact("mae")
-            if (mae != null) {
-                mae.history.add(Message(content = "Filha, o vizinho ligou. Disse que estiveste a gritar com o poste de iluminação ontem à noite.", isFromPlayer = false, timestamp = "Agora"))
-                mae.history.add(Message(content = "Ele disse que estavas a gritar 'Pára de me seguir' para um poste vazio.", isFromPlayer = false, timestamp = "Agora"))
-                mae.currentNodeId = "mae_stalker_found"
-                notificationContent.value = "Mãe: O vizinho ligou..."
-                showNotificationPopup.value = true
-                hasTriggeredGalleryReaction = true
-            }
-        }
-    }
+    // triggerGalleryStalkerEvent REMOVIDO
 
     fun triggerPhotoRevealedEvent() {
         if (!isSecretPhotoRevealed) {
@@ -291,8 +236,6 @@ object GameData {
             }
         }
     }
-
-    fun installSiteCam() { if (!isSiteCamInstalled.value) isSiteCamInstalled.value = true }
 
     fun triggerGhostEmail() {
         if (emails.isEmpty()) {
@@ -333,6 +276,7 @@ object GameData {
                 chefeContact.history.add(Message(content = "Eu sei o que está no betão.", isFromPlayer = true, timestamp = "Agora", isRead = true))
             }
 
+            // Resposta automática do chefe (simula atraso no ecrã da conversa)
             if (chefeContact != null) {
                 chefeContact.history.add(Message(content = "Sofia? De que estás a falar?", isFromPlayer = false, timestamp = "Agora"))
                 chefeContact.history.add(Message(content = "Eu estou na obra agora. Na cave.", isFromPlayer = false, timestamp = "Agora"))
