@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fundo Preto -->
+    <item android:drawable="@color/black" />
+
+    <!-- A tua Imagem de Capa (Centrada) -->
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/cover_image" />
+    </item>
+</layer-list>

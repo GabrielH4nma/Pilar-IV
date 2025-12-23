@@ -26,16 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.protocolosombra.data.GameData
-import com.example.protocolosombra.ui.BankScreen
-import com.example.protocolosombra.ui.ChatScreen
-import com.example.protocolosombra.ui.ConversationScreen
-import com.example.protocolosombra.ui.EmailScreen
-import com.example.protocolosombra.ui.GalleryScreen
-import com.example.protocolosombra.ui.HomeScreen
-import com.example.protocolosombra.ui.NotesScreen
-import com.example.protocolosombra.ui.NotificationBanner
-import com.example.protocolosombra.ui.SiteCamScreen
-import com.example.protocolosombra.ui.TrackerScreen
+import com.example.protocolosombra.ui.*
 import kotlinx.coroutines.delay
 
 object Routes {
@@ -52,6 +43,9 @@ object Routes {
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // --- MOSTRAR SPLASH SCREEN ---
+        setTheme(R.style.Theme_ProtocoloSombra)
+
         super.onCreate(savedInstanceState)
 
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -69,21 +63,17 @@ fun GameNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // --- SEQUÊNCIA FORÇADA (CHAT -> HOME -> TRACKER) ---
-    // Este efeito observa o gatilho e conduz o jogador
+    // --- NAVEGAÇÃO SIMPLIFICADA (SEM BLOQUEIOS) ---
+    // Removemos qualquer lógica de "debounce" ou atraso.
+    // O sistema de navegação padrão do Compose é rápido e reativo.
+    // O problema de "ficar preso" deve desaparecer com esta abordagem limpa.
+
     LaunchedEffect(GameData.triggerForcedNavigation.value) {
         if (GameData.triggerForcedNavigation.value) {
-            // 1. Volta ao Menu
             navController.popBackStack(Routes.HOME, inclusive = false)
-            delay(1500) // Pausa dramática no menu
-
-            // 2. Abre MyTrack sozinho
+            delay(1500)
             navController.navigate(Routes.TRACKER)
-
-            // 3. Ativa o playback automático no MyTrack (via flag)
             GameData.isHauntedPlaybackActive.value = true
-
-            // Reset do gatilho para não repetir
             GameData.triggerForcedNavigation.value = false
         }
     }
@@ -113,7 +103,6 @@ fun GameNavigation() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(navController = navController, startDestination = Routes.HOME) {
-
             composable(Routes.HOME) {
                 HomeScreen(
                     onNavigateToChat = { navController.navigate(Routes.CHAT) },
@@ -125,57 +114,26 @@ fun GameNavigation() {
                     onNavigateToEmail = { navController.navigate(Routes.EMAIL) }
                 )
             }
-
             composable(Routes.CHAT) {
                 ChatScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToConversation = { contactId ->
-                        navController.navigate("conversation/$contactId")
-                    }
+                    onNavigateToConversation = { contactId -> navController.navigate("conversation/$contactId") }
                 )
             }
-
-            composable(
-                route = Routes.CONVERSATION,
-                arguments = listOf(navArgument("contactId") { type = NavType.StringType })
-            ) { backStackEntry ->
+            composable(route = Routes.CONVERSATION, arguments = listOf(navArgument("contactId") { type = NavType.StringType })) { backStackEntry ->
                 val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
-                ConversationScreen(
-                    contactId = contactId,
-                    onBack = { navController.popBackStack() }
-                )
+                ConversationScreen(contactId = contactId, onBack = { navController.popBackStack() })
             }
-
-            composable(Routes.NOTES) {
-                NotesScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable(Routes.BANK) {
-                BankScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable(Routes.GALLERY) {
-                GalleryScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable(Routes.TRACKER) {
-                TrackerScreen(onBack = { navController.popBackStack() })
-            }
-
+            composable(Routes.NOTES) { NotesScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.BANK) { BankScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.GALLERY) { GalleryScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.TRACKER) { TrackerScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.SITECAM) {
-                SiteCamScreen(
-                    onBack = { navController.popBackStack() },
-                    onForceNavigateToChat = {
-                        navController.navigate("conversation/chefe") {
-                            popUpTo(Routes.HOME) { inclusive = false }
-                        }
-                    }
-                )
+                SiteCamScreen(onBack = { navController.popBackStack() }, onForceNavigateToChat = {
+                    navController.navigate("conversation/chefe") { popUpTo(Routes.HOME) { inclusive = false } }
+                })
             }
-
-            composable(Routes.EMAIL) {
-                EmailScreen(onBack = { navController.popBackStack() })
-            }
+            composable(Routes.EMAIL) { EmailScreen(onBack = { navController.popBackStack() }) }
         }
 
         AnimatedVisibility(
@@ -184,10 +142,7 @@ fun GameNavigation() {
             exit = slideOutVertically(targetOffsetY = { -it }),
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            NotificationBanner(
-                text = GameData.notificationContent.value,
-                onDismiss = { GameData.showNotificationPopup.value = false }
-            )
+            NotificationBanner(text = GameData.notificationContent.value, onDismiss = { GameData.showNotificationPopup.value = false })
         }
     }
 }

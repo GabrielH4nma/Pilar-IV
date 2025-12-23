@@ -137,9 +137,10 @@ fun ConversationScreen(
         LaunchedEffect(Unit) {
             if (messages.isEmpty()) {
                 val ghostMessages = listOf(
-                    "Tu não estás a ver a obra, pois não?",
-                    "Tu estás a ver a minha memória.",
-                    "Eu sou o Pilar 4. E agora tu estás cá dentro comigo."
+                    "Não estás a ver a obra, pois não?",
+                    "Estás a ver a minha memória",
+                    "Eu sou o Pilar 4",
+                    "E agora tu estás cá dentro comigo."
                 )
                 delay(2000)
                 ghostMessages.forEach { msg ->

@@ -84,15 +84,20 @@ object GameData {
             status = "Visto há 10 min",
             initialMessages = listOf(
                 Message(content = "Foste à farmácia levantar a receita?", isFromPlayer = false, timestamp = "Domingo 19:00"),
-                Message(content = "Ainda não. Não preciso daquilo.", isFromPlayer = true, timestamp = "Domingo 19:30"),
-                Message(content = "Sofia, por favor. O Dr. Luz disse que a interrupção causa alucinações.", isFromPlayer = false, timestamp = "Domingo 20:00"),
-                Message(content = "Estás a olhar para as paredes outra vez? Vem para a cama.", isFromPlayer = false, timestamp = "Domingo 21:00"),
-                Message(content = "Não são as paredes, Ricardo. É o que está dentro delas.", isFromPlayer = true, timestamp = "Domingo 21:05"),
-                Message(content = "Atende o telemóvel.", isFromPlayer = false, timestamp = "Domingo 22:30"),
+                Message(content = "Ainda não", isFromPlayer = true, timestamp = "Domingo 19:30"),
+                Message(content = "Não preciso daquilo", isFromPlayer = true, timestamp = "Domingo 19:30"),
+                Message(content = "Sofia, por favor", isFromPlayer = false, timestamp = "Domingo 20:00"),
+                Message(content = "O Dr. Luz disse que a interrupção causa alucinações", isFromPlayer = false, timestamp = "Domingo 20:00"),
+                Message(content = "Estás a olhar para as paredes outra vez?", isFromPlayer = false, timestamp = "Domingo 21:00"),
+                Message(content = "Vem para a cama", isFromPlayer = false, timestamp = "Domingo 21:00"),
+                Message(content = "Não são as paredes, Ricardo", isFromPlayer = true, timestamp = "Domingo 21:05"),
+                Message(content = "Não entendes", isFromPlayer = true, timestamp = "Domingo 21:05"),
+                Message(content = "Atende o telemóvel", isFromPlayer = false, timestamp = "Domingo 22:30"),
                 // O PIN (2231)
-                Message(content = "Já disse que não vou assinar nada. Pára de insistir.", isFromPlayer = true, timestamp = "Domingo 22:31"),
+                Message(content = "Já disse que não vou assinar nada", isFromPlayer = true, timestamp = "Domingo 22:31"),
+                Message(content = "Pára de insistir", isFromPlayer = true, timestamp = "Domingo 22:31"),
                 Message(content = "Onde estás?", isFromPlayer = false, timestamp = "Domingo 23:15"),
-                Message(content = "Estou a ficar preocupado.", isFromPlayer = false, timestamp = "Ontem 09:00")
+                Message(content = "Estou a ficar preocupado", isFromPlayer = false, timestamp = "Ontem 09:00")
             )
         ),
 
@@ -102,17 +107,26 @@ object GameData {
             name = "Tiago Eng. (Antigo Colega)",
             status = "Offline",
             initialMessages = listOf(
-                Message(content = "Eles limparam a minha secretária hoje. Nem me deixaram levar as plantas.", isFromPlayer = false, timestamp = "3 dias atrás"),
-                Message(content = "Tiago, lamento imenso... Foi por causa do relatório de densidade?", isFromPlayer = true, timestamp = "3 dias atrás"),
-                Message(content = "Foi por ter olhos na cara. O betão do Pilar 4 não secou, Sofia. Não secou porque tem 'coisas' lá dentro.", isFromPlayer = false, timestamp = "3 dias atrás"),
-                Message(content = "Vi a carrinha de 'Limpeza' da Clínica Luz a rondar o teu prédio. Eles sabem que tu tens a cópia.", isFromPlayer = false, timestamp = "Ontem 18:00"),
-                Message(content = "Estás a deixar-me paranoica.", isFromPlayer = true, timestamp = "Ontem 18:02"),
-                Message(content = "Não é paranoia se eles te perseguem. Ouve, o teu smartwatch.", isFromPlayer = false, timestamp = "Ontem 18:05"),
+                Message(content = "Eles limparam a minha secretária hoje", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "Nem me deixaram levar as plantas", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "Tiago, lamento imenso...", isFromPlayer = true, timestamp = "3 dias atrás"),
+                Message(content = "Foi por causa do relatório de densidade?", isFromPlayer = true, timestamp = "3 dias atrás"),
+                Message(content = "Foi por ter olhos na cara", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "O betão do Pilar 4 não secou, Sofia", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "Porque será", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "Vi a carrinha de 'Limpeza' da Clínica Luz a rondar o teu prédio", isFromPlayer = false, timestamp = "Ontem 18:00"),
+                Message(content = "Eles sabem que tu tens a cópia", isFromPlayer = false, timestamp = "Ontem 18:00"),
+                Message(content = "Estás a deixar-me paranoica", isFromPlayer = true, timestamp = "Ontem 18:02"),
+                Message(content = "Não é paranoia se eles te perseguem", isFromPlayer = false, timestamp = "Ontem 18:05"),
+                Message(content = "Ouve, o teu smartwatch", isFromPlayer = false, timestamp = "Ontem 18:05"),
                 Message(content = "O que tem?", isFromPlayer = true, timestamp = "Ontem 18:06"),
-                Message(content = "Lembras-te da app 'MyTrack' que usámos para calibrar o terreno? Ativa o registo contínuo.", isFromPlayer = false, timestamp = "Ontem 18:07"),
-                Message(content = "Se o teu coração parar ou o sinal GPS for para onde não deve... fica a prova na cloud. É o teu seguro de vida.", isFromPlayer = false, timestamp = "Ontem 18:08"),
-                Message(content = "Ok. Vou ativar agora.", isFromPlayer = true, timestamp = "Ontem 18:10"),
-                Message(content = "Apaga esta conversa. Se eu não disser nada amanhã, foge.", isFromPlayer = false, timestamp = "Ontem 18:12")
+                Message(content = "Lembras-te da app 'MyTrack' que usámos para calibrar o terreno?", isFromPlayer = false, timestamp = "Ontem 18:07"),
+                Message(content = "Ativa o registo contínuo", isFromPlayer = false, timestamp = "Ontem 18:07"),
+                Message(content = "Se o teu coração parar ou o sinal GPS for para onde não deve...", isFromPlayer = false, timestamp = "Ontem 18:08"),
+                Message(content = "Fica a prova na cloud", isFromPlayer = false, timestamp = "Ontem 18:08"),
+                Message(content = "É o teu seguro de vida", isFromPlayer = false, timestamp = "Ontem 18:08"),
+                Message(content = "Ok", isFromPlayer = true, timestamp = "Ontem 18:10"),
+                Message(content = "Vou ativar agora", isFromPlayer = true, timestamp = "Ontem 18:10"),
             )
         ),
 
@@ -122,12 +136,13 @@ object GameData {
             name = "Mãe",
             status = "Online",
             initialMessages = listOf(
-                Message(content = "O pai diz que ouviu barulhos no teu quarto quando lá foi regar as plantas.", isFromPlayer = false, timestamp = "3 dias atrás"),
-                Message(content = "Mas não estava lá ninguém. A casa está vazia.", isFromPlayer = false, timestamp = "3 dias atrás"),
-                Message(content = "Mãe, eu tranquei tudo.", isFromPlayer = true, timestamp = "3 dias atrás"),
-                Message(content = "Tu tens de parar com essa ideia da 'geometria errada'. É só um prédio, filha.", isFromPlayer = false, timestamp = "2 dias atrás"),
-                Message(content = "Não vás à obra à noite. Tu sabes o que acontece quando ficas sem dormir.", isFromPlayer = false, timestamp = "Ontem 09:00"),
-                Message(content = "Liga-me.", isFromPlayer = false, timestamp = "Ontem 09:30")
+                Message(content = "O pai diz que ouviu barulhos no teu quarto quando lá foi regar as plantas", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "Mas não estava lá ninguém", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "A casa está vazia", isFromPlayer = false, timestamp = "3 dias atrás"),
+                Message(content = "Mãe, eu tranquei tudo", isFromPlayer = true, timestamp = "3 dias atrás"),
+                Message(content = "Tu tens de parar com essa ideia da 'geometria errada'", isFromPlayer = false, timestamp = "2 dias atrás"),
+                Message(content = "Tu sabes o que acontece quando ficas sem dormir", isFromPlayer = false, timestamp = "Ontem 09:00"),
+                Message(content = "Liga-me", isFromPlayer = false, timestamp = "Ontem 09:30")
             )
         ),
 
@@ -137,21 +152,14 @@ object GameData {
             name = "Chefe Arq. (Nuno)",
             status = "Ocupado",
             initialMessages = listOf(
-                Message(content = "Recebi o teu relatório sobre o 'som'.", isFromPlayer = false, timestamp = "Sexta 14:00"),
-                Message(content = "Sofia, betão não grita. Tira uns dias de folga.", isFromPlayer = false, timestamp = "Sexta 14:05"),
-                Message(content = "Se voltares a assustar os investidores com histórias de fantasmas, estás despedida.", isFromPlayer = false, timestamp = "Ontem 10:00")
-            )
-        ),
-
-        // --- DESCONHECIDO ---
-        ContactProfile(
-            id = "desconhecido",
-            name = "Desconhecido",
-            status = "Offline",
-            initialMessages = listOf(
-                Message(content = "Estás a ver o reflexo ou estás a ver através do espelho?", isFromPlayer = false, timestamp = "Segunda 03:00")
+                Message(content = "Recebi o teu relatório sobre o 'som'", isFromPlayer = false, timestamp = "Sexta 14:00"),
+                Message(content = "Sofia, betão não grita", isFromPlayer = false, timestamp = "Sexta 14:05"),
+                Message(content = "Tira uns dias de folga", isFromPlayer = false, timestamp = "Sexta 14:05"),
+                Message(content = "Se voltares a assustar os investidores com histórias de fantasmas", isFromPlayer = false, timestamp = "Ontem 10:00"),
+                Message(content = "Estás despedida", isFromPlayer = false, timestamp = "Ontem 10:00")
             )
         )
+        // DESCONHECIDO REMOVIDO DO INÍCIO
     )
 
     init {
@@ -171,22 +179,21 @@ object GameData {
             id = "ricardo_bank_hack",
             npcMessages = emptyList(),
             options = listOf(
-                ReplyOption("Estava só a confirmar o saldo. Preciso de organizar a vida.", "ricardo_bank_rational"),
-                ReplyOption("O que é que a Clínica faz exatamente? Eu esqueci-me.", "ricardo_bank_clinic")
+                ReplyOption("Estava só a confirmar o saldo", "ricardo_bank_rational"),
+                ReplyOption("O que é que a Clínica faz?", "ricardo_bank_clinic") // Reduzido para 2 opções
             )
         ),
         "ricardo_bank_rational" to DialogueNode(
             id = "ricardo_bank_rational",
-            npcMessages = listOf("Espero que sim.", "Aquele dinheiro da Kronos... tu disseste que era 'dinheiro de sangue', mas continuas a usá-lo.", "Decide-te, Sofia."),
+            npcMessages = listOf("Espero que sim", "Aquele dinheiro da Kronos...", "Tu disseste que era 'dinheiro de sangue'", "Mas continuas a usá-lo", "Decide-te, Sofia"),
             options = emptyList()
         ),
         "ricardo_bank_clinic" to DialogueNode(
             id = "ricardo_bank_clinic",
-            npcMessages = listOf("Não te faças de parva.", "Hipnoterapia Regressiva? 'Limpeza de Memória'?", "Tu disseste que precisavas de esquecer o que viste na Cave.", "Mas só ficaste pior."),
+            npcMessages = listOf("Não te faças de parva", "Hipnoterapia Regressiva?", "'Limpeza de Memória'?", "Tu disseste que precisavas de esquecer o que viste na Cave", "Mas só ficaste pior"),
             options = emptyList()
         ),
-        // NÓS DA MÃE STALKER REMOVIDOS
-        "chefe_start" to DialogueNode(id = "chefe_start", npcMessages = emptyList(), options = listOf(ReplyOption("Vou entregar o relatório.", null)))
+        "chefe_start" to DialogueNode(id = "chefe_start", npcMessages = emptyList(), options = listOf(ReplyOption("Vou entregar o relatório", null)))
     )
 
     fun getContact(id: String): ContactProfile? = contacts.find { it.id == id }
@@ -201,7 +208,9 @@ object GameData {
         if (!hasTriggeredBankReaction) {
             val ricardo = getContact("ricardo")
             if (ricardo != null) {
-                ricardo.history.add(Message(content = "Vi a notificação do banco. Estás a gastar dinheiro outra vez? Diz-me que não foi para aquela 'Clínica'.", isFromPlayer = false, timestamp = "Agora"))
+                ricardo.history.add(Message(content = "Vi a notificação do banco", isFromPlayer = false, timestamp = "Agora"))
+                ricardo.history.add(Message(content = "Estás a gastar dinheiro outra vez?", isFromPlayer = false, timestamp = "Agora"))
+                ricardo.history.add(Message(content = "Diz-me que não foi para aquela 'Clínica'", isFromPlayer = false, timestamp = "Agora"))
                 ricardo.currentNodeId = "ricardo_bank_hack"
                 notificationContent.value = "Ricardo: Vi a notificação..."
                 showNotificationPopup.value = true
@@ -212,25 +221,49 @@ object GameData {
 
     fun triggerUnknownBankHint() {
         if (!hasTriggeredUnknownHint) {
-            val unknownContact = getContact("desconhecido")
-            if (unknownContact != null) {
-                unknownContact.history.add(Message(content = "O dinheiro compra silencio mas nao compra a paz.", isFromPlayer = false, timestamp = "Agora"))
-                unknownContact.history.add(Message(content = "A verdade está na Galeria, a chave reside no ultimo adeus.", isFromPlayer = false, timestamp = "Agora"))
-                notificationContent.value = "Desconhecido: A verdade está na Galeria..."
-                showNotificationPopup.value = true
-                hasTriggeredUnknownHint = true
+            // Cria e adiciona o contacto "Desconhecido" dinamicamente
+            var unknownContact = getContact("desconhecido")
+            if (unknownContact == null) {
+                unknownContact = ContactProfile(
+                    id = "desconhecido",
+                    name = "Desconhecido",
+                    status = "Offline",
+                    initialMessages = emptyList()
+                )
+                contacts.add(0, unknownContact) // Adiciona no topo da lista
             }
+
+            // Adiciona as mensagens
+            unknownContact.history.add(Message(content = "O dinheiro compra silencio", isFromPlayer = false, timestamp = "Agora"))
+            unknownContact.history.add(Message(content = "Mas nao compra a paz", isFromPlayer = false, timestamp = "Agora"))
+            unknownContact.history.add(Message(content = "A verdade está na Galeria", isFromPlayer = false, timestamp = "Agora"))
+            unknownContact.history.add(Message(content = "A chave reside no ultimo adeus", isFromPlayer = false, timestamp = "Agora"))
+
+            notificationContent.value = "Desconhecido: A verdade está na Galeria..."
+            showNotificationPopup.value = true
+            hasTriggeredUnknownHint = true
         }
     }
-
-    // triggerGalleryStalkerEvent REMOVIDO
 
     fun triggerPhotoRevealedEvent() {
         if (!isSecretPhotoRevealed) {
             isSecretPhotoRevealed = true
-            val unknownContact = getContact("desconhecido")
+
+            // Garante que o contacto existe (caso o jogador tenha saltado passos, embora improvável)
+            var unknownContact = getContact("desconhecido")
+            if (unknownContact == null) {
+                unknownContact = ContactProfile(
+                    id = "desconhecido",
+                    name = "Desconhecido",
+                    status = "Offline",
+                    initialMessages = emptyList()
+                )
+                contacts.add(0, unknownContact)
+            }
+
             if (unknownContact != null) {
-                unknownContact.history.add(Message(content = "Viste o que não devias. Agora nós vemos-te.", isFromPlayer = false, timestamp = "Agora"))
+                unknownContact.history.add(Message(content = "Viste o que não devias", isFromPlayer = false, timestamp = "Agora"))
+                unknownContact.history.add(Message(content = "Agora nós vemos-te a ti", isFromPlayer = false, timestamp = "Agora"))
                 notificationContent.value = "Desconhecido: Viste o que não devias."
                 showNotificationPopup.value = true
             }
@@ -247,9 +280,9 @@ object GameData {
                     body = """
                         Análise de áudio da Cave (Setor 4).
                         
-                        1. Não há eco. O som não bate nas paredes, é absorvido. (Impossível em betão armado).
-                        2. As leituras térmicas mostram calor a vir de dentro dos pilares. 37 graus Celsius. Temperatura humana.
-                        3. Não é um cemitério, Ricardo. Eles não estão a esconder corpos mortos.
+                        1. Não há eco. O som não bate nas paredes, é absorvido, (Impossível em betão armado).
+                        2. As leituras térmicas mostram calor a vir de dentro dos pilares, 37 graus Celsius, Temperatura humana.
+                        3. Eles estão a esconder algo
                         
                         O betão está a agir como uma membrana.
                         Vou descer hoje para instalar o backdoor nas câmaras.
@@ -273,14 +306,17 @@ object GameData {
 
             if (chefeContact != null) {
                 chefeContact.history.add(Message(content = "[FOTO ANEXADA: PROVA_CRIME.jpg]", isFromPlayer = true, timestamp = "A enviar...", isRead = true, imageResId = R.drawable.cam02_hand))
-                chefeContact.history.add(Message(content = "Eu sei o que está no betão.", isFromPlayer = true, timestamp = "Agora", isRead = true))
+                chefeContact.history.add(Message(content = "Eu sei o que está no betão", isFromPlayer = true, timestamp = "Agora", isRead = true))
             }
 
             // Resposta automática do chefe (simula atraso no ecrã da conversa)
             if (chefeContact != null) {
-                chefeContact.history.add(Message(content = "Sofia? De que estás a falar?", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "Eu estou na obra agora. Na cave.", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "Não há nenhum pilar 4. O projeto foi alterado há meses.", isFromPlayer = false, timestamp = "Agora"))
+                chefeContact.history.add(Message(content = "Sofia?", isFromPlayer = false, timestamp = "Agora"))
+                chefeContact.history.add(Message(content = "De que estás a falar?", isFromPlayer = false, timestamp = "Agora"))
+                chefeContact.history.add(Message(content = "Eu estou na obra agora", isFromPlayer = false, timestamp = "Agora"))
+                chefeContact.history.add(Message(content = "Na cave", isFromPlayer = false, timestamp = "Agora"))
+                chefeContact.history.add(Message(content = "Não há nenhum pilar 4", isFromPlayer = false, timestamp = "Agora"))
+                chefeContact.history.add(Message(content = "O projeto foi alterado há meses", isFromPlayer = false, timestamp = "Agora"))
                 chefeContact.history.add(Message(content = "", isFromPlayer = false, timestamp = "Agora", imageResId = R.drawable.cave_empty))
             }
 

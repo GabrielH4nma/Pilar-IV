@@ -38,19 +38,23 @@ fun HomeScreen(
     onNavigateToEmail: () -> Unit
 ) {
     var showInstallationDialog by remember { mutableStateOf(false) }
+    // Observamos o estado global diretamente
     val isSiteCamInstalled = GameData.isSiteCamInstalled.value
+    val trackerSequenceFinished = GameData.trackerSequenceFinished.value
 
     val pageCount = if (isSiteCamInstalled) 2 else 1
     val pagerState = rememberPagerState(pageCount = { pageCount })
 
     // Gatilho de Instalação (SiteCam)
-    LaunchedEffect(GameData.trackerSequenceFinished.value) {
-        if (GameData.trackerSequenceFinished.value && !GameData.isSiteCamInstalled.value) {
+    // Só mostramos o diálogo se a sequência do tracker acabou E a SiteCam AINDA NÃO está instalada
+    LaunchedEffect(trackerSequenceFinished, isSiteCamInstalled) {
+        if (trackerSequenceFinished && !isSiteCamInstalled) {
             delay(1000)
             showInstallationDialog = true
         }
     }
 
+    // Animação automática para a página da SiteCam quando ela é instalada
     LaunchedEffect(isSiteCamInstalled) {
         if (isSiteCamInstalled && !GameData.hasShownSiteCamAnimation.value) {
             delay(500)
@@ -77,9 +81,11 @@ fun HomeScreen(
         ) { page ->
             Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (page == 0) {
+                    // Página 1: Apps Principais
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                         val hasChatNotification = GameData.hasUnreadMessages()
-                        AppIcon("ChatLog", Color(0xFF4CAF50), onNavigateToChat, hasNotification = hasChatNotification)
+                        // CORREÇÃO: Nome mudado de "ChatLog" para "Chat"
+                        AppIcon("Chat", Color(0xFF4CAF50), onNavigateToChat, hasNotification = hasChatNotification)
                         AppIcon("Galeria", Color(0xFF2196F3), onNavigateToGallery)
                     }
                     Spacer(modifier = Modifier.height(30.dp))
@@ -89,17 +95,19 @@ fun HomeScreen(
                     }
                     Spacer(modifier = Modifier.height(30.dp))
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        // MyTrack sempre visível agora
+                        // MyTrack sempre visível
                         AppIcon("MyTrack", Color(0xFF9C27B0), onNavigateToTracker, isUrgent = false)
 
                         val hasEmailNotification = GameData.hasUnreadEmails()
                         AppIcon("Gmail", Color(0xFFD44638), onNavigateToEmail, hasNotification = hasEmailNotification)
                     }
                 } else if (page == 1) {
+                    // Página 2: SiteCam (Só aparece depois de instalada)
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                         AppIcon("SiteCam", Color(0xFF607D8B), onNavigateToSiteCam)
-                        InvisibleAppIcon()
+                        InvisibleAppIcon() // Placeholder para manter o alinhamento
                     }
+                    // Placeholders extra para manter a grelha consistente
                     Spacer(modifier = Modifier.height(30.dp))
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                         InvisibleAppIcon()
@@ -116,6 +124,7 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // Indicador de Página (Pontinhos)
         if (pageCount > 1) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 repeat(pageCount) { iteration ->
@@ -130,10 +139,11 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(40.dp))
     }
 
+    // Diálogo de Instalação (Glitch/Hacking)
     if (showInstallationDialog) {
         SystemInstallationDialog(
             onFinished = {
-                // CORREÇÃO: Alteramos o valor diretamente em vez de chamar a função
+                // Atualiza o estado global para "Instalado"
                 GameData.isSiteCamInstalled.value = true
                 showInstallationDialog = false
             }
@@ -141,24 +151,27 @@ fun HomeScreen(
     }
 }
 
-// ... SystemInstallationDialog, AppIcon e InvisibleAppIcon mantêm-se iguais
 @Composable
 fun SystemInstallationDialog(onFinished: () -> Unit) {
-    var progress by remember { mutableStateOf(0f) }
+    var progress by remember { mutableFloatStateOf(0f) }
     var text by remember { mutableStateOf("A Conectar a CONST_LUZ_SECURE...") }
     var titleColor by remember { mutableStateOf(Color.White) }
 
     LaunchedEffect(Unit) {
         delay(1500)
         text = "A descarregar Ferramentas de Admin..."
-        val steps = 20
+        // Simulação de progresso
         for (i in 1..10) {
             progress = i / 20f
             delay(100)
         }
+
+        // Momento "Glitch"
         text = "NAO_ME_DEIXES_AQUI.apk"
         titleColor = Color.Red
         delay(1000)
+
+        // Retoma instalação normal
         text = "A instalar SiteCam Viewer..."
         titleColor = Color.White
         for (i in 11..20) {
