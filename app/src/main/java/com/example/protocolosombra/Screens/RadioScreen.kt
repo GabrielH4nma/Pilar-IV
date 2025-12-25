@@ -14,10 +14,14 @@ import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.VolumeDown
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,10 +34,14 @@ data class MusicTrack(val id: Int, val title: String, val artist: String, val du
 @Composable
 fun RadioScreen(
     onBack: () -> Unit,
-    // Novos parâmetros: Recebe o estado e controlo do "pai" (MainActivity)
     currentTrack: MusicTrack?,
     isPlaying: Boolean,
-    onTogglePlayPause: (MusicTrack) -> Unit
+    onTogglePlayPause: (MusicTrack) -> Unit,
+    currentPosition: Float, // Posição atual em ms
+    totalDuration: Float,    // Duração total em ms
+    volumeLevel: Float,      // Volume (0.0 a 1.0)
+    onVolumeChange: (Float) -> Unit, // Callback para mudança de volume
+    onRestart: () -> Unit // Callback para reiniciar música
 ) {
     val context = LocalContext.current
 
@@ -51,6 +59,17 @@ fun RadioScreen(
             MusicTrack(3, "Sombra Estática", "Pilar IV OST", "04:10"),
             MusicTrack(4, "Interferência", "Pilar IV OST", "01:55")
         )
+    }
+
+    // Calcula o progresso de 0 a 1 para a barra
+    val progress = if (totalDuration > 0) (currentPosition / totalDuration).coerceIn(0f, 1f) else 0f
+
+    // Função auxiliar para formatar milissegundos em MM:SS
+    fun formatTime(ms: Float): String {
+        val seconds = (ms / 1000).toInt()
+        val minutes = seconds / 60
+        val remainingSeconds = seconds % 60
+        return "%02d:%02d".format(minutes, remainingSeconds)
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFF121212))) {
@@ -74,12 +93,12 @@ fun RadioScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.4f)
+                .weight(0.5f) // Aumentei um pouco o peso para caber o volume
                 .padding(24.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 // Animação de pulsação (só visual)
                 val pulseAlpha by animateFloatAsState(
                     targetValue = if (isPlaying) 1f else 0.7f,
@@ -91,7 +110,7 @@ fun RadioScreen(
 
                 Box(
                     modifier = Modifier
-                        .size(120.dp)
+                        .size(100.dp)
                         .background(Color(0xFFE91E63).copy(alpha = if (isPlaying) pulseAlpha else 1f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -99,17 +118,18 @@ fun RadioScreen(
                         if (isPlaying) Icons.Default.GraphicEq else Icons.Default.Audiotrack,
                         null,
                         tint = Color.White,
-                        modifier = Modifier.size(60.dp)
+                        modifier = Modifier.size(50.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = currentTrack?.title ?: "Nenhuma Faixa",
                     color = Color.White,
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
                 )
                 Text(
                     text = currentTrack?.artist ?: "Selecione uma música",
@@ -119,17 +139,72 @@ fun RadioScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Controlos
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // --- BARRA DE PROGRESSO E TEMPO ---
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = Color(0xFFE91E63),
+                        trackColor = Color.DarkGray,
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = formatTime(currentPosition),
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            text = if (currentTrack != null) formatTime(totalDuration) else "--:--",
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- CONTROLOS PRINCIPAIS ---
+                // Row centralizada para os botões de controlo
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center // Garante que tudo fica no meio
+                ) {
+                    // Botão Recomeçar (à esquerda)
                     IconButton(
-                        onClick = {
-                            // Chama a função do MainActivity
-                            currentTrack?.let { onTogglePlayPause(it) }
-                        },
-                        enabled = currentTrack != null,
+                        onClick = { onRestart() },
+                        enabled = currentTrack != null
+                    ) {
+                        Icon(
+                            Icons.Default.Replay,
+                            "Recomeçar",
+                            tint = if (currentTrack != null) Color.LightGray else Color.DarkGray,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(32.dp)) // Espaço entre Recomeçar e Play
+
+                    // Botão Play/Pause (Centro)
+                    // Usamos Box para garantir o tamanho e forma corretos
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .size(64.dp)
-                            .background(if (currentTrack != null) Color(0xFFE91E63) else Color.Gray, CircleShape)
+                            .clip(CircleShape)
+                            .background(if (currentTrack != null) Color(0xFFE91E63) else Color.Gray)
+                            .clickable(enabled = currentTrack != null) {
+                                currentTrack?.let { onTogglePlayPause(it) }
+                            }
                     ) {
                         Icon(
                             if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -138,6 +213,39 @@ fun RadioScreen(
                             modifier = Modifier.size(32.dp)
                         )
                     }
+
+                    // Elemento "fantasma" à direita para equilibrar o layout se quisermos simetria perfeita
+                    // Como só temos 2 botões funcionais no centro, podemos adicionar um Spacer do mesmo tamanho do primeiro botão + margem
+                    // Ou simplesmente deixar assim se quisermos o Play no centro absoluto da Row
+
+                    // Se o botão Play não parecer estar no centro geométrico da Row, podemos usar um Spacer dummy:
+                    Spacer(modifier = Modifier.width(32.dp))
+                    // Spacer do tamanho do botão Replay para forçar o Play a ficar no centro exato
+                    Spacer(modifier = Modifier.size(48.dp)) // 32dp icon + padding default do IconButton
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- SLIDER DE VOLUME ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.VolumeDown, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Slider(
+                        value = volumeLevel,
+                        onValueChange = { onVolumeChange(it) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color(0xFFE91E63),
+                            inactiveTrackColor = Color.DarkGray
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.VolumeUp, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -151,7 +259,7 @@ fun RadioScreen(
             modifier = Modifier.padding(start = 24.dp, bottom = 8.dp)
         )
 
-        LazyColumn(modifier = Modifier.weight(0.6f)) {
+        LazyColumn(modifier = Modifier.weight(0.5f)) {
             items(tracks) { track ->
                 TrackItem(
                     track = track,

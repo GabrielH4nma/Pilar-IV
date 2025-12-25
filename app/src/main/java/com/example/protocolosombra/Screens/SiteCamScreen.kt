@@ -135,20 +135,45 @@ fun SiteCamScreen(
                         mp.isLooping = true
                         mp.start()
                         buildupPlayer.value = mp
+                    } else {
+                        try {
+                            if (buildupPlayer.value?.isPlaying == false) {
+                                buildupPlayer.value?.start()
+                            }
+                        } catch (e: IllegalStateException) {
+                            // Se o player estiver num estado inválido, recriamos
+                            buildupPlayer.value?.release()
+                            val mp = MediaPlayer.create(context, resId)
+                            mp.isLooping = true
+                            mp.start()
+                            buildupPlayer.value = mp
+                        }
                     }
                     val volume = intensity.coerceIn(0f, 1f)
                     buildupPlayer.value?.setVolume(volume, volume)
                 } else {
-                    buildupPlayer.value?.pause()
+                    if (buildupPlayer.value?.isPlaying == true) {
+                        buildupPlayer.value?.pause()
+                    }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                // Em caso de erro fatal, tentamos limpar
+                buildupPlayer.value = null
+            }
         }
     }
 
+    // Limpeza rigorosa ao sair do ecrã
     DisposableEffect(Unit) {
         onDispose {
-            staticPlayer.value?.release()
-            buildupPlayer.value?.release()
+            try {
+                staticPlayer.value?.release()
+                staticPlayer.value = null
+
+                buildupPlayer.value?.stop()
+                buildupPlayer.value?.release()
+                buildupPlayer.value = null
+            } catch (e: Exception) {}
         }
     }
 
