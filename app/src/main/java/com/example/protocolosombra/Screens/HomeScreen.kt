@@ -1,12 +1,11 @@
 package com.example.protocolosombra.ui
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -24,9 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.protocolosombra.data.GameData
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToChat: () -> Unit,
@@ -35,18 +34,13 @@ fun HomeScreen(
     onNavigateToNotes: () -> Unit,
     onNavigateToTracker: () -> Unit,
     onNavigateToSiteCam: () -> Unit,
-    onNavigateToEmail: () -> Unit
+    onNavigateToEmail: () -> Unit,
+    onNavigateToRadio: () -> Unit
 ) {
     var showInstallationDialog by remember { mutableStateOf(false) }
-    // Observamos o estado global diretamente
     val isSiteCamInstalled = GameData.isSiteCamInstalled.value
     val trackerSequenceFinished = GameData.trackerSequenceFinished.value
 
-    val pageCount = if (isSiteCamInstalled) 2 else 1
-    val pagerState = rememberPagerState(pageCount = { pageCount })
-
-    // Gatilho de Instalação (SiteCam)
-    // Só mostramos o diálogo se a sequência do tracker acabou E a SiteCam AINDA NÃO está instalada
     LaunchedEffect(trackerSequenceFinished, isSiteCamInstalled) {
         if (trackerSequenceFinished && !isSiteCamInstalled) {
             delay(1000)
@@ -54,100 +48,122 @@ fun HomeScreen(
         }
     }
 
-    // Animação automática para a página da SiteCam quando ela é instalada
-    LaunchedEffect(isSiteCamInstalled) {
-        if (isSiteCamInstalled && !GameData.hasShownSiteCamAnimation.value) {
-            delay(500)
-            pagerState.animateScrollToPage(1)
-            GameData.hasShownSiteCamAnimation.value = true
-        }
-    }
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF121212))) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            FakeStatusBar()
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF121212))) {
-        FakeStatusBar()
-        Spacer(modifier = Modifier.height(40.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 60.dp, bottom = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("19:42", color = Color(0xFFE0E0E0), fontSize = 72.sp, fontWeight = FontWeight.Light)
+                Text("Segunda, 23 Out", color = Color(0xFFA0A0A0), fontSize = 18.sp, letterSpacing = 1.sp)
+            }
 
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("19:42", color = Color(0xFFE0E0E0), fontSize = 80.sp, fontWeight = FontWeight.Thin)
-            Text("Segunda, 23 Out", color = Color(0xFFA0A0A0), fontSize = 18.sp, letterSpacing = 2.sp)
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-        ) { page ->
-            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                if (page == 0) {
-                    // Página 1: Apps Principais
-                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        val hasChatNotification = GameData.hasUnreadMessages()
-                        // CORREÇÃO: Nome mudado de "ChatLog" para "Chat"
-                        AppIcon("Chat", Color(0xFF4CAF50), onNavigateToChat, hasNotification = hasChatNotification)
-                        AppIcon("Galeria", Color(0xFF2196F3), onNavigateToGallery)
-                    }
-                    Spacer(modifier = Modifier.height(30.dp))
-                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        AppIcon("Banco", Color(0xFFFFC107), onNavigateToBank)
-                        AppIcon("Notas", Color(0xFFFF5722), onNavigateToNotes)
-                    }
-                    Spacer(modifier = Modifier.height(30.dp))
-                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        // MyTrack sempre visível
-                        AppIcon("MyTrack", Color(0xFF9C27B0), onNavigateToTracker, isUrgent = false)
-
-                        val hasEmailNotification = GameData.hasUnreadEmails()
-                        AppIcon("Gmail", Color(0xFFD44638), onNavigateToEmail, hasNotification = hasEmailNotification)
-                    }
-                } else if (page == 1) {
-                    // Página 2: SiteCam (Só aparece depois de instalada)
-                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                item { AppIcon("Galeria", Color(0xFF2196F3), onNavigateToGallery) }
+                item { AppIcon("Banco", Color(0xFFFFC107), onNavigateToBank) }
+                item { AppIcon("Notas", Color(0xFFFF5722), onNavigateToNotes) }
+                item {
+                    AppIcon("MyTrack", Color(0xFF9C27B0), onNavigateToTracker)
+                }
+                item {
+                    val hasEmailNotification = GameData.hasUnreadEmails()
+                    AppIcon("Gmail", Color(0xFFD44638), onNavigateToEmail, hasNotification = hasEmailNotification)
+                }
+                item {
+                    if (isSiteCamInstalled) {
                         AppIcon("SiteCam", Color(0xFF607D8B), onNavigateToSiteCam)
-                        InvisibleAppIcon() // Placeholder para manter o alinhamento
-                    }
-                    // Placeholders extra para manter a grelha consistente
-                    Spacer(modifier = Modifier.height(30.dp))
-                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        InvisibleAppIcon()
-                        InvisibleAppIcon()
-                    }
-                    Spacer(modifier = Modifier.height(30.dp))
-                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        InvisibleAppIcon()
-                        InvisibleAppIcon()
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .shadow(10.dp, RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color(0xFF252525), Color(0xFF1E1E1E))
+                        ),
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppIcon(
+                        name = "Rádio",
+                        color = Color(0xFFE91E63),
+                        onClick = onNavigateToRadio,
+                        iconSize = 55.dp
+                    )
 
-        // Indicador de Página (Pontinhos)
-        if (pageCount > 1) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                repeat(pageCount) { iteration ->
-                    val color = if (pagerState.currentPage == iteration) Color.White else Color.DarkGray
-                    Box(modifier = Modifier.padding(4.dp).clip(CircleShape).background(color).size(8.dp))
+                    Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.DarkGray))
+
+                    val hasChatNotification = GameData.hasUnreadMessages()
+                    AppIcon(
+                        name = "Chat",
+                        color = Color(0xFF4CAF50),
+                        onClick = onNavigateToChat,
+                        hasNotification = hasChatNotification,
+                        iconSize = 55.dp
+                    )
                 }
             }
-        } else {
             Spacer(modifier = Modifier.height(16.dp))
         }
-
-        Spacer(modifier = Modifier.height(40.dp))
     }
 
-    // Diálogo de Instalação (Glitch/Hacking)
     if (showInstallationDialog) {
-        SystemInstallationDialog(
-            onFinished = {
-                // Atualiza o estado global para "Instalado"
-                GameData.isSiteCamInstalled.value = true
-                showInstallationDialog = false
+        SystemInstallationDialog(onFinished = { GameData.isSiteCamInstalled.value = true; showInstallationDialog = false })
+    }
+}
+
+@Composable
+fun AppIcon(
+    name: String,
+    color: Color,
+    onClick: () -> Unit,
+    hasNotification: Boolean = false,
+    isUrgent: Boolean = false,
+    iconSize: androidx.compose.ui.unit.Dp = 60.dp
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "urgent")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 0.5f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "alpha"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }.padding(4.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (isUrgent) {
+                Box(modifier = Modifier.size(iconSize + 10.dp).background(Color.Red.copy(alpha = alpha), RoundedCornerShape(20.dp)))
             }
-        )
+            Box(modifier = Modifier.size(iconSize).background(color, shape = RoundedCornerShape(16.dp)))
+            if (hasNotification) {
+                Box(modifier = Modifier.size(14.dp).background(Color.Red, CircleShape).align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = name, color = Color.White, fontSize = 12.sp, maxLines = 1)
     }
 }
 
@@ -160,34 +176,20 @@ fun SystemInstallationDialog(onFinished: () -> Unit) {
     LaunchedEffect(Unit) {
         delay(1500)
         text = "A descarregar Ferramentas de Admin..."
-        // Simulação de progresso
-        for (i in 1..10) {
-            progress = i / 20f
-            delay(100)
-        }
-
-        // Momento "Glitch"
+        for (i in 1..10) { progress = i / 20f; delay(100) }
         text = "NAO_ME_DEIXES_AQUI.apk"
         titleColor = Color.Red
         delay(1000)
-
-        // Retoma instalação normal
         text = "A instalar SiteCam Viewer..."
         titleColor = Color.White
-        for (i in 11..20) {
-            progress = i / 20f
-            delay(50)
-        }
+        for (i in 11..20) { progress = i / 20f; delay(50) }
         delay(500)
         onFinished()
     }
 
     Dialog(onDismissRequest = {}) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF222222), RoundedCornerShape(12.dp))
-                .padding(24.dp),
+            modifier = Modifier.fillMaxWidth().background(Color(0xFF222222), RoundedCornerShape(12.dp)).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(Icons.Default.Download, null, tint = titleColor, modifier = Modifier.size(40.dp))
@@ -197,46 +199,5 @@ fun SystemInstallationDialog(onFinished: () -> Unit) {
             Text(text, color = titleColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(bottom = 20.dp))
             LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth().height(8.dp), color = titleColor, trackColor = Color.Black)
         }
-    }
-}
-
-@Composable
-fun AppIcon(
-    name: String,
-    color: Color,
-    onClick: () -> Unit,
-    hasNotification: Boolean = false,
-    isUrgent: Boolean = false
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "urgent")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 0.5f,
-        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "alpha"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }.padding(8.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (isUrgent) {
-                Box(modifier = Modifier.size(70.dp).background(Color.Red.copy(alpha = alpha), RoundedCornerShape(20.dp)))
-            }
-            Box(modifier = Modifier.size(60.dp).background(color, shape = RoundedCornerShape(16.dp)))
-            if (hasNotification) {
-                Box(modifier = Modifier.size(16.dp).background(Color.Red, CircleShape).align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp))
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = name, color = Color.White, fontSize = 14.sp)
-    }
-}
-
-@Composable
-fun InvisibleAppIcon() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
-        Box(modifier = Modifier.size(60.dp))
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Placeholder", color = Color.Transparent, fontSize = 14.sp)
     }
 }

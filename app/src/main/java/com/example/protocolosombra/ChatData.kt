@@ -58,7 +58,6 @@ object GameData {
 
     // GATILHOS DE EVENTOS ÚNICOS
     var hasTriggeredBankReaction = false
-    // hasTriggeredGalleryReaction REMOVIDO
     var hasTriggeredUnknownHint = false
 
     var showNotificationPopup = mutableStateOf(false)
@@ -141,6 +140,8 @@ object GameData {
                 Message(content = "A casa está vazia", isFromPlayer = false, timestamp = "3 dias atrás"),
                 Message(content = "Mãe, eu tranquei tudo", isFromPlayer = true, timestamp = "3 dias atrás"),
                 Message(content = "Tu tens de parar com essa ideia da 'geometria errada'", isFromPlayer = false, timestamp = "2 dias atrás"),
+                Message(content = "É só um prédio, filha", isFromPlayer = false, timestamp = "2 dias atrás"),
+                Message(content = "Não vás à obra à noite", isFromPlayer = false, timestamp = "Ontem 09:00"),
                 Message(content = "Tu sabes o que acontece quando ficas sem dormir", isFromPlayer = false, timestamp = "Ontem 09:00"),
                 Message(content = "Liga-me", isFromPlayer = false, timestamp = "Ontem 09:30")
             )
@@ -159,7 +160,7 @@ object GameData {
                 Message(content = "Estás despedida", isFromPlayer = false, timestamp = "Ontem 10:00")
             )
         )
-        // DESCONHECIDO REMOVIDO DO INÍCIO
+        // DESCONHECIDO REMOVIDO DO INÍCIO (Só aparece após o evento do Banco)
     )
 
     init {
@@ -180,7 +181,7 @@ object GameData {
             npcMessages = emptyList(),
             options = listOf(
                 ReplyOption("Estava só a confirmar o saldo", "ricardo_bank_rational"),
-                ReplyOption("O que é que a Clínica faz?", "ricardo_bank_clinic") // Reduzido para 2 opções
+                ReplyOption("O que é que a Clínica faz?", "ricardo_bank_clinic")
             )
         ),
         "ricardo_bank_rational" to DialogueNode(
