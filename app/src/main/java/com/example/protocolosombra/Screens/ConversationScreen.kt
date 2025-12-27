@@ -61,21 +61,6 @@ fun ConversationScreen(contactId: String, onBack: () -> Unit) {
 
     LaunchedEffect(Unit) { GameData.markAsRead(contactId) }
 
-    // --- SEQUÊNCIA DO DESCONHECIDO (OLHO GIGANTE) ---
-    if (isDesconhecido && GameData.isSecretPhotoRevealed && !GameData.trackerSequenceFinished.value) {
-        LaunchedEffect(Unit) {
-            delay(2000)
-            GameData.showHauntedMarks.value = true
-            // REMOVIDO: O som de "static_burst" foi retirado daqui.
-            // O som de desenho (draw_line) será tocado pelo componente HauntedQuestionMarkOverlay.
-
-            // Aumentamos o tempo de espera para 6 segundos para dar tempo à animação lenta
-            delay(6000)
-            GameData.showHauntedMarks.value = false
-            GameData.triggerForcedNavigation.value = true
-        }
-    }
-
     val chatState = rememberChatState(contact)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -105,23 +90,78 @@ fun ConversationScreen(contactId: String, onBack: () -> Unit) {
         }
     }
 
+    // --- SEQUÊNCIA DO DESCONHECIDO (PONTO DE INTERROGAÇÃO GIGANTE) ---
+    if (isDesconhecido && GameData.isSecretPhotoRevealed && !GameData.trackerSequenceFinished.value) {
+        LaunchedEffect(Unit) {
+            delay(2000)
+            GameData.showHauntedMarks.value = true
+            // REMOVIDO: O som de "static_burst" foi retirado daqui.
+            // O som de desenho (draw_line) será tocado pelo componente HauntedQuestionMarkOverlay.
+
+            // Aumentamos o tempo de espera para 6 segundos para dar tempo à animação lenta
+            delay(6000)
+            GameData.showHauntedMarks.value = false
+            GameData.triggerForcedNavigation.value = true
+        }
+    }
+
+    // --- SEQUÊNCIA DA SOFIA (NOVO) ---
+    // Esta lógica corre APENAS quando o jogador abre o chat da Sofia
     if (isGhostChat) {
         LaunchedEffect(Unit) {
+            // Só corre se ainda não houver mensagens (para não repetir se o jogador sair e voltar rápido)
             if (messages.isEmpty()) {
-                val ghostMessages = listOf("Tu não estás a ver a obra, pois não?", "Tu estás a ver a minha memória.", "Eu sou o Pilar 4. E agora tu estás cá dentro comigo.")
+
+                // 1. Primeira mensagem
                 delay(2000)
-                ghostMessages.forEach { msg ->
-                    chatState.isTyping.value = true; playSound("typing"); delay(2000)
-                    chatState.isTyping.value = false; playSound("received")
-                    messages.add(Message(content = msg, isFromPlayer = false, timestamp = "Agora", isRead = true))
-                    delay(2500)
-                }
-                delay(4000)
-                showFinalGlitch = true
-                val resId = context.resources.getIdentifier("static_burst", "raw", context.packageName)
-                if (resId != 0) MediaPlayer.create(context, resId).start()
+                playSound("typing")
+                chatState.isTyping.value = true
                 delay(3000)
-                (context as? Activity)?.finish()
+                chatState.isTyping.value = false
+                playSound("received")
+                messages.add(Message(content = "Tu não estás a ver a obra, pois não?", isFromPlayer = false, timestamp = "Agora", isRead = true))
+
+                // 2. Segunda mensagem
+                delay(4000)
+                playSound("typing")
+                chatState.isTyping.value = true
+                delay(3000)
+                chatState.isTyping.value = false
+                playSound("received")
+                messages.add(Message(content = "Tu estás a ver a minha memória", isFromPlayer = false, timestamp = "Agora", isRead = true))
+
+                // 3. Terceira mensagem
+                delay(4000)
+                playSound("typing")
+                chatState.isTyping.value = true
+                delay(2000)
+                chatState.isTyping.value = false
+                playSound("received")
+                messages.add(Message(content = "Eu sou o Pilar 4", isFromPlayer = false, timestamp = "Agora", isRead = true))
+
+                // 4. Última mensagem
+                delay(3000)
+                playSound("typing")
+                chatState.isTyping.value = true
+                delay(4000)
+                chatState.isTyping.value = false
+                playSound("received")
+                messages.add(Message(content = "E agora tu estás cá dentro comigo", isFromPlayer = false, timestamp = "Agora", isRead = true))
+
+                // 5. Final: Glitch e Crash
+                delay(3000)
+                showFinalGlitch = true
+
+                // Som de estática/interferência final
+                val resId = context.resources.getIdentifier("static_burst", "raw", context.packageName)
+                if (resId != 0) {
+                    val mp = MediaPlayer.create(context, resId)
+                    mp.start()
+                }
+
+                delay(3000)
+                // Dispara o crash na MainActivity
+                GameData.isGameFinished.value = true
             }
         }
     }
@@ -131,47 +171,71 @@ fun ConversationScreen(contactId: String, onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0F1510))) {
             FakeStatusBar()
-            Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1F2C34)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Cabeçalho da conversa
+            Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1F2C34)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.ArrowBack, "Voltar", tint = if (isGhostChat) Color.Gray else Color.White, modifier = Modifier.padding(4.dp).clickable(enabled = !backPressed && !isGhostChat && !GameData.showHauntedMarks.value) { backPressed = true; onBack() })
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(modifier = Modifier.size(35.dp).clip(CircleShape).background(Color.Gray), contentAlignment = Alignment.Center) { Text(contact.name.first().toString(), color = Color.White, fontWeight = FontWeight.Bold) }
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Gray), contentAlignment = Alignment.Center) { Text(contact.name.first().toString(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(contact.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
-                    Text(if (chatState.isTyping.value) "A escrever..." else contact.status, color = if (chatState.isTyping.value) Color(0xFF25D366) else Color(0xFFA0A0A0), fontSize = 12.sp, fontWeight = if (chatState.isTyping.value) FontWeight.Bold else FontWeight.Normal)
+                    Text(contact.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1)
+                    Text(if (chatState.isTyping.value) "A escrever..." else contact.status, color = if (chatState.isTyping.value) Color(0xFF25D366) else Color(0xFFA0A0A0), fontSize = 14.sp, fontWeight = if (chatState.isTyping.value) FontWeight.Bold else FontWeight.Normal)
                 }
                 Icon(Icons.Default.MoreVert, "Menu", tint = Color.White)
             }
 
-            LazyColumn(state = listState, modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentPadding = PaddingValues(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Lista de mensagens
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                contentPadding = PaddingValues(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 items(messages) { message -> MessageBubble(message) }
                 if (chatState.isTyping.value) item { TypingIndicator() }
             }
 
             if (!isGhostChat && !isDesconhecido) {
                 AnimatedVisibility(visible = chatState.currentOptions.value.isNotEmpty()) {
-                    Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF1F2C34)).padding(10.dp)) {
-                        Text("A tua resposta:", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF1F2C34))
+                            .padding(16.dp)
+                    ) {
+                        Text("A tua resposta:", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(bottom = 12.dp))
                         chatState.currentOptions.value.forEach { option ->
                             Button(
                                 onClick = { chatState.selectOption(option, scope, onTypingSound = { playSound("typing") }, onMessageSound = { playSound("received") }) },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .height(50.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A3942), contentColor = Color.White),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 14.sp) }
+                                shape = RoundedCornerShape(12.dp)
+                            ) { Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 16.sp) }
                         }
                     }
                 }
             }
             if (!isGhostChat && chatState.currentOptions.value.isEmpty() && !chatState.isTyping.value) {
-                Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1F2C34)).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Aguardando contacto...", color = Color.Gray, fontSize = 14.sp, fontStyle = FontStyle.Italic, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1F2C34))
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Aguardando contacto...", color = Color.Gray, fontSize = 16.sp, fontStyle = FontStyle.Italic, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // Sobreposição do Olho Gigante
+        // Sobreposição do Olho Gigante (Ponto de interrogação modificado)
         if (GameData.showHauntedMarks.value) {
             HauntedQuestionMarkOverlay()
         }
@@ -180,6 +244,7 @@ fun ConversationScreen(contactId: String, onBack: () -> Unit) {
     }
 }
 
+// ... (funções auxiliares HauntedQuestionMarkOverlay, FinalGlitchOverlay, MessageBubble, TypingIndicator mantêm-se iguais)
 @Composable
 fun HauntedQuestionMarkOverlay() {
     val context = LocalContext.current
@@ -218,7 +283,7 @@ fun HauntedQuestionMarkOverlay() {
             animationSpec = tween(durationMillis = 4500, easing = LinearEasing)
         )
 
-        // Limpeza final (caso sobre algum som)
+        // Limpeza final
         try {
             drawingSoundPlayer.value?.stop()
             drawingSoundPlayer.value?.release()

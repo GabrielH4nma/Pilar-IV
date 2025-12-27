@@ -52,12 +52,33 @@ fun RadioScreen(
                 id = 1,
                 title = "Ecos do Betão",
                 artist = "Pilar IV OST",
-                duration = "03:45",
+                duration = "00:48", // Alterado para 48s
                 resourceId = context.resources.getIdentifier("faixa1", "raw", context.packageName)
             ),
-            MusicTrack(2, "Frequência Morta", "Pilar IV OST", "02:20"),
-            MusicTrack(3, "Sombra Estática", "Pilar IV OST", "04:10"),
-            MusicTrack(4, "Interferência", "Pilar IV OST", "01:55")
+            MusicTrack(
+                id = 2,
+                title = "Frequência Morta",
+                artist = "Pilar IV OST",
+                duration = "00:51", // Alterado para 51s
+                // ADICIONADO: faixa2
+                resourceId = context.resources.getIdentifier("faixa2", "raw", context.packageName)
+            ),
+            MusicTrack(
+                id = 3,
+                title = "Sombra Estática",
+                artist = "Pilar IV OST",
+                duration = "04:10",
+                // Placeholder (ainda sem ficheiro, ou usa um existente se quiseres)
+                resourceId = null
+            ),
+            MusicTrack(
+                id = 4,
+                title = "Interferência",
+                artist = "Pilar IV OST",
+                duration = "01:19", // Alterado para 1m 19s
+                // ADICIONADO: faixa4
+                resourceId = context.resources.getIdentifier("faixa4", "raw", context.packageName)
+            )
         )
     }
 
@@ -150,6 +171,7 @@ fun RadioScreen(
                         color = Color(0xFFE91E63),
                         trackColor = Color.DarkGray,
                     )
+                    // REMOVIDO: O ponto vermelho no final da linha do tempo
 
                     Spacer(modifier = Modifier.height(8.dp))
 

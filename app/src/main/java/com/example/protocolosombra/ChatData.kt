@@ -56,8 +56,14 @@ object GameData {
     var triggerForcedNavigation = mutableStateOf(false)
     var isHauntedPlaybackActive = mutableStateOf(false)
 
+    // --- NOVOS ESTADOS PARA O FINAL ---
+    var isFinalSequenceActive = mutableStateOf(false)
+    var isSofiaChatUnlocked = mutableStateOf(false)
+    var isSystemRebooted = mutableStateOf(false)
+
     // GATILHOS DE EVENTOS ÚNICOS
     var hasTriggeredBankReaction = false
+    // hasTriggeredGalleryReaction REMOVIDO
     var hasTriggeredUnknownHint = false
 
     var showNotificationPopup = mutableStateOf(false)
@@ -301,33 +307,15 @@ object GameData {
     }
 
     fun triggerFinalSequence() {
-        if (!isGameFinished.value) {
-            isGameFinished.value = true
+        if (!isFinalSequenceActive.value && !isGameFinished.value) {
+            isFinalSequenceActive.value = true
+
             val chefeContact = getContact("chefe")
 
             if (chefeContact != null) {
                 chefeContact.history.add(Message(content = "[FOTO ANEXADA: PROVA_CRIME.jpg]", isFromPlayer = true, timestamp = "A enviar...", isRead = true, imageResId = R.drawable.cam02_hand))
                 chefeContact.history.add(Message(content = "Eu sei o que está no betão", isFromPlayer = true, timestamp = "Agora", isRead = true))
             }
-
-            // Resposta automática do chefe (simula atraso no ecrã da conversa)
-            if (chefeContact != null) {
-                chefeContact.history.add(Message(content = "Sofia?", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "De que estás a falar?", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "Eu estou na obra agora", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "Na cave", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "Não há nenhum pilar 4", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "O projeto foi alterado há meses", isFromPlayer = false, timestamp = "Agora"))
-                chefeContact.history.add(Message(content = "", isFromPlayer = false, timestamp = "Agora", imageResId = R.drawable.cave_empty))
-            }
-
-            val sofiaContact = ContactProfile(
-                id = "sofia_ghost",
-                name = "Eu (Sofia)",
-                status = "Online",
-                initialMessages = emptyList()
-            )
-            contacts.add(0, sofiaContact)
         }
     }
 

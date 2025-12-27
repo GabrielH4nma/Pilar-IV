@@ -1,5 +1,6 @@
 package com.example.protocolosombra
 
+import android.content.Context
 import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -14,6 +16,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -28,11 +31,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.protocolosombra.data.GameData
+import com.example.protocolosombra.data.*
 import com.example.protocolosombra.ui.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive // Adicionar este import
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 object Routes {
     const val HOME = "home"
@@ -45,6 +49,7 @@ object Routes {
     const val SITECAM = "sitecam"
     const val EMAIL = "email"
     const val RADIO = "radio"
+    const val CAVE_APP = "cave_app"
 }
 
 class MainActivity : ComponentActivity() {
@@ -54,167 +59,254 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
+        val sharedPref = getPreferences(Context.MODE_PRIVATE)
+        val isRebooted = sharedPref.getBoolean("isSystemRebooted", false)
+        if (isRebooted) {
+            GameData.isSystemRebooted.value = true
+        }
+
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
 
         setContent {
-            GameNavigation()
+            GameNavigation(
+                saveRebootState = {
+                    val editor = sharedPref.edit()
+                    editor.putBoolean("isSystemRebooted", true)
+                    editor.apply()
+                },
+                finishApp = {
+                    finishAndRemoveTask() // Fecha a app e remove da lista de recentes
+                }
+            )
         }
     }
 }
 
 @Composable
-fun GameNavigation() {
+fun GameNavigation(saveRebootState: () -> Unit = {}, finishApp: () -> Unit = {}) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
+    // Função local para tocar sons na MainActivity (necessária para as mensagens do Chefe)
+    fun playSound(fileName: String) {
+        val resId = context.resources.getIdentifier(fileName, "raw", context.packageName)
+        if (resId != 0) {
+            try {
+                val mp = MediaPlayer.create(context, resId)
+                mp.setOnCompletionListener { it.release() }
+                mp.start()
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
     // --- GESTÃO DE ÁUDIO GLOBAL ---
-    // Mantemos o estado da música aqui para que continue a tocar entre ecrãs
     var currentTrack by remember { mutableStateOf<MusicTrack?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
-
-    // Novos estados para o progresso
     var currentPosition by remember { mutableFloatStateOf(0f) }
-    var totalDuration by remember { mutableFloatStateOf(1f) } // Evitar divisão por zero
-    var volumeLevel by remember { mutableFloatStateOf(1f) } // Volume inicial (100%)
+    var totalDuration by remember { mutableFloatStateOf(1f) }
+    var volumeLevel by remember { mutableFloatStateOf(1f) }
 
     val mediaPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
-
-    // Coroutine scope para atualizar o progresso
+    val staticPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
     val audioScope = rememberCoroutineScope()
 
-    // Função para parar e limpar o player
+    val radioTracks = remember {
+        listOf(
+            MusicTrack(1, "Ecos do Betão", "Pilar IV OST", "03:45", context.resources.getIdentifier("faixa1", "raw", context.packageName)),
+            MusicTrack(2, "Frequência Morta", "Pilar IV OST", "02:20", context.resources.getIdentifier("faixa2", "raw", context.packageName)),
+            MusicTrack(3, "Sombra Estática", "Pilar IV OST", "04:10", null),
+            MusicTrack(4, "Interferência", "Pilar IV OST", "01:55", context.resources.getIdentifier("faixa4", "raw", context.packageName))
+        )
+    }
+
     fun releaseMediaPlayer() {
         try {
             mediaPlayer.value?.stop()
             mediaPlayer.value?.release()
             mediaPlayer.value = null
-            isPlaying = false // Garante que o estado da UI reflete que parou
+            staticPlayer.value?.stop()
+            staticPlayer.value?.release()
+            staticPlayer.value = null
+            isPlaying = false
             currentPosition = 0f
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
-    // Função auxiliar para parar explicitamente a rádio (usada em eventos de tensão)
-    fun stopRadio() {
-        if (isPlaying) {
-            releaseMediaPlayer()
-        }
-    }
+    fun stopRadio() { if (isPlaying) releaseMediaPlayer() }
 
-    // Função para mudar o volume
     fun setVolume(volume: Float) {
         volumeLevel = volume.coerceIn(0f, 1f)
         try {
             mediaPlayer.value?.setVolume(volumeLevel, volumeLevel)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+            staticPlayer.value?.setVolume(volumeLevel, volumeLevel)
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
-    // Função para recomeçar a música
     fun restartMusic() {
         try {
             mediaPlayer.value?.seekTo(0)
-            if (!isPlaying) {
-                mediaPlayer.value?.start()
-                isPlaying = true
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+            if (!isPlaying) { mediaPlayer.value?.start(); isPlaying = true }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
-    // Função global para controlar a música
-    fun togglePlayPause(track: MusicTrack) {
-        val selectedId = track.resourceId
+    var playNextTrack: (() -> Unit)? = null
 
-        // Se for a mesma música, pausa/resume
-        if (currentTrack?.id == track.id && mediaPlayer.value != null) {
-            if (isPlaying) {
-                mediaPlayer.value?.pause()
-                isPlaying = false
-            } else {
-                mediaPlayer.value?.start()
-                isPlaying = true
-            }
-            return
-        }
-
-        // Se for nova música
-        releaseMediaPlayer()
-
-        if (selectedId != null && selectedId != 0) {
-            try {
-                val mp = MediaPlayer.create(context, selectedId)
-                mp.isLooping = true // Opcional: repetir a música
-                mp.setVolume(volumeLevel, volumeLevel) // Define o volume inicial
-                mp.start()
-
-                mediaPlayer.value = mp
-                isPlaying = true
-                currentTrack = track
-                totalDuration = mp.duration.toFloat()
-
-                // Inicia loop de atualização de progresso
-                audioScope.launch {
-                    while (mediaPlayer.value != null && mediaPlayer.value!!.isPlaying) {
-                        currentPosition = mediaPlayer.value!!.currentPosition.toFloat()
-                        delay(500) // Atualiza a cada meio segundo
-                    }
+    fun playMusicContent(selectedId: Int) {
+        try {
+            val mp = MediaPlayer.create(context, selectedId)
+            mp.isLooping = false
+            mp.setVolume(volumeLevel, volumeLevel)
+            mp.setOnCompletionListener { playNextTrack?.invoke() }
+            mp.start()
+            mediaPlayer.value = mp
+            totalDuration = mp.duration.toFloat()
+            audioScope.launch {
+                while (mediaPlayer.value != null && mediaPlayer.value!!.isPlaying) {
+                    currentPosition = mediaPlayer.value!!.currentPosition.toFloat()
+                    delay(500)
                 }
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                isPlaying = false
             }
-        } else {
-            // Faixa placeholder
+        } catch (e: Exception) { e.printStackTrace(); isPlaying = false }
+    }
+
+    fun startTrackSequence(track: MusicTrack) {
+        val selectedId = track.resourceId
+        releaseMediaPlayer()
+        if (selectedId != null && selectedId != 0) {
             isPlaying = true
             currentTrack = track
-            // Simulação de progresso para placeholder
+            audioScope.launch {
+                val staticResId = context.resources.getIdentifier("radio_static", "raw", context.packageName)
+                if (staticResId != 0) {
+                    try {
+                        val staticMp = MediaPlayer.create(context, staticResId)
+                        staticMp.setVolume(volumeLevel, volumeLevel)
+                        staticMp.isLooping = true
+                        staticMp.start()
+                        staticPlayer.value = staticMp
+                        val staticDuration = Random.nextLong(1000, 10000)
+                        delay(staticDuration)
+                        staticMp.stop()
+                        staticMp.release()
+                        staticPlayer.value = null
+                    } catch (e: Exception) { e.printStackTrace() }
+                }
+                if (isPlaying) playMusicContent(selectedId)
+            }
+        } else {
+            isPlaying = true
+            currentTrack = track
             totalDuration = 100f
             currentPosition = 50f
+            audioScope.launch { delay(3000); if (isPlaying) playNextTrack?.invoke() }
         }
     }
 
-    // Lança um loop independente para manter o progresso atualizado se estiver a tocar
-    // Isto garante que a barra se mexe mesmo que togglePlayPause não seja chamado recentemente
+    playNextTrack = {
+        val currentIndex = radioTracks.indexOfFirst { it.id == currentTrack?.id }
+        if (currentIndex != -1) {
+            val nextIndex = (currentIndex + 1) % radioTracks.size
+            val nextTrack = radioTracks[nextIndex]
+            startTrackSequence(nextTrack)
+        }
+    }
+
+    fun togglePlayPause(track: MusicTrack) {
+        if (currentTrack?.id == track.id && mediaPlayer.value != null) {
+            if (isPlaying) { mediaPlayer.value?.pause(); isPlaying = false }
+            else { mediaPlayer.value?.start(); isPlaying = true }
+            return
+        }
+        startTrackSequence(track)
+    }
+
     LaunchedEffect(isPlaying) {
-        while (isPlaying && mediaPlayer.value != null) {
-            if (mediaPlayer.value!!.isPlaying) {
+        while (isPlaying) {
+            if (mediaPlayer.value != null && mediaPlayer.value!!.isPlaying) {
                 currentPosition = mediaPlayer.value!!.currentPosition.toFloat()
-                // Atualiza a duração caso tenha mudado ou inicializado tarde
-                if (mediaPlayer.value!!.duration > 0) {
-                    totalDuration = mediaPlayer.value!!.duration.toFloat()
-                }
+                if (mediaPlayer.value!!.duration > 0) totalDuration = mediaPlayer.value!!.duration.toFloat()
+            } else if (staticPlayer.value != null && staticPlayer.value!!.isPlaying) {
+                currentPosition = 0f
             }
-            delay(100) // Atualização fluida (10fps)
+            delay(100)
         }
     }
 
-    // Garante que a música para se a app for fechada completamente
-    DisposableEffect(Unit) {
-        onDispose {
-            releaseMediaPlayer()
-        }
-    }
+    DisposableEffect(Unit) { onDispose { releaseMediaPlayer() } }
 
     // --- LÓGICA DO JOGO ---
 
-    // NOVO: Pára a rádio assim que o olho gigante começa a aparecer
-    LaunchedEffect(GameData.showHauntedMarks.value) {
-        if (GameData.showHauntedMarks.value) {
-            stopRadio()
+    // 1. Resposta do Chefe em Tempo Real
+    LaunchedEffect(GameData.isFinalSequenceActive.value) {
+        if (GameData.isFinalSequenceActive.value && !GameData.isSofiaChatUnlocked.value) {
+            val chefeContact = GameData.getContact("chefe")
+
+            if (chefeContact != null) {
+                delay(5000)
+                playSound("received") // SOM DE MENSAGEM
+                chefeContact.history.add(Message(content = "Sofia?", isFromPlayer = false, timestamp = "Agora"))
+                GameData.notificationContent.value = "Chefe: Sofia?"
+                GameData.showNotificationPopup.value = true
+
+                delay(3000)
+                playSound("received") // SOM DE MENSAGEM
+                chefeContact.history.add(Message(content = "De que estás a falar?", isFromPlayer = false, timestamp = "Agora"))
+
+                delay(4000)
+                playSound("received") // SOM DE MENSAGEM
+                chefeContact.history.add(Message(content = "Eu estou na obra agora", isFromPlayer = false, timestamp = "Agora"))
+
+                delay(2000)
+                playSound("received") // SOM DE MENSAGEM
+                chefeContact.history.add(Message(content = "Na cave", isFromPlayer = false, timestamp = "Agora"))
+
+                delay(3000)
+                playSound("received") // SOM DE MENSAGEM
+                chefeContact.history.add(Message(content = "Não há nenhum pilar 4", isFromPlayer = false, timestamp = "Agora"))
+
+                delay(3000)
+                playSound("received") // SOM DE MENSAGEM
+                chefeContact.history.add(Message(content = "O projeto foi alterado há meses", isFromPlayer = false, timestamp = "Agora"))
+
+                delay(3000)
+                playSound("received") // SOM DE MENSAGEM
+                chefeContact.history.add(Message(content = "", isFromPlayer = false, timestamp = "Agora", imageResId = R.drawable.cave_empty))
+                GameData.notificationContent.value = "Chefe enviou uma foto."
+                GameData.showNotificationPopup.value = true
+            }
+
+            // SÓ AGORA desbloqueamos o chat da Sofia
+            delay(5000)
+            GameData.isSofiaChatUnlocked.value = true
+
+            val sofiaContact = ContactProfile(
+                id = "sofia_ghost",
+                name = "Eu (Sofia)",
+                status = "Online",
+                initialMessages = mutableStateListOf()
+            )
+
+            if (GameData.getContact("sofia_ghost") == null) {
+                GameData.contacts.add(0, sofiaContact)
+
+                // REMOVIDO: Notificação de novo contacto
+                // O jogador tem de ir procurar na lista de chats
+
+                // playSound("received") // Removido som de notificação também
+                // GameData.notificationContent.value = "Novo contacto: Eu (Sofia)"
+                // GameData.showNotificationPopup.value = true
+            }
         }
     }
 
+    LaunchedEffect(GameData.showHauntedMarks.value) { if (GameData.showHauntedMarks.value) stopRadio() }
+
     LaunchedEffect(GameData.triggerForcedNavigation.value) {
         if (GameData.triggerForcedNavigation.value) {
-            stopRadio() // Redundância para garantir que parou
-            navController.popBackStack(Routes.HOME, inclusive = false)
+            stopRadio()
+            navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
             delay(1500)
             navController.navigate(Routes.TRACKER)
             GameData.isHauntedPlaybackActive.value = true
@@ -235,9 +327,20 @@ fun GameNavigation() {
     LaunchedEffect(GameData.isSiteCamInstalled.value) {
         if (GameData.isSiteCamInstalled.value && GameData.emails.isEmpty()) {
             delay(20000)
-            if (GameData.emails.isEmpty()) {
-                GameData.triggerGhostEmail()
-            }
+            if (GameData.emails.isEmpty()) GameData.triggerGhostEmail()
+        }
+    }
+
+    // GATILHO PARA O REINÍCIO (FALSO CRASH) E FECHO DA APP
+    LaunchedEffect(GameData.isGameFinished.value) {
+        if (GameData.isGameFinished.value && !GameData.isSystemRebooted.value) {
+            stopRadio()
+            GameData.isSystemRebooted.value = true
+            saveRebootState()
+
+            // Em vez de navegar para a Home, fechamos a app (Crash Simulado)
+            delay(1000) // Pequeno atraso para o efeito de glitch assentar
+            finishApp()
         }
     }
 
@@ -252,7 +355,8 @@ fun GameNavigation() {
                     onNavigateToTracker = { navController.navigate(Routes.TRACKER) },
                     onNavigateToSiteCam = { navController.navigate(Routes.SITECAM) },
                     onNavigateToEmail = { navController.navigate(Routes.EMAIL) },
-                    onNavigateToRadio = { navController.navigate(Routes.RADIO) }
+                    onNavigateToRadio = { navController.navigate(Routes.RADIO) },
+                    onNavigateToCave = { navController.navigate(Routes.CAVE_APP) }
                 )
             }
             composable(Routes.CHAT) { ChatScreen(onBack = { navController.popBackStack() }, onNavigateToConversation = { id -> navController.navigate("conversation/$id") }) }
@@ -264,27 +368,27 @@ fun GameNavigation() {
             composable(Routes.GALLERY) { GalleryScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.TRACKER) { TrackerScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.SITECAM) {
-                // Só pára a rádio se as câmaras estiverem ativas (online)
-                if (GameData.hasReadGhostEmail.value) {
-                    stopRadio()
-                }
+                if (GameData.hasReadGhostEmail.value) stopRadio()
                 SiteCamScreen(onBack = { navController.popBackStack() }, onForceNavigateToChat = { navController.navigate("conversation/chefe") { popUpTo(Routes.HOME) { inclusive = false } } })
             }
             composable(Routes.EMAIL) { EmailScreen(onBack = { navController.popBackStack() }) }
-
-            // Passamos o estado e a função de controlo para o ecrã da Rádio
             composable(Routes.RADIO) {
                 RadioScreen(
                     onBack = { navController.popBackStack() },
                     currentTrack = currentTrack,
                     isPlaying = isPlaying,
                     onTogglePlayPause = { track -> togglePlayPause(track) },
-                    currentPosition = currentPosition, // Passamos o progresso atual
-                    totalDuration = totalDuration,      // E a duração total
-                    volumeLevel = volumeLevel,          // Nível de volume
-                    onVolumeChange = { setVolume(it) }, // Função de mudar volume
-                    onRestart = { restartMusic() }      // Função de recomeçar
+                    currentPosition = currentPosition,
+                    totalDuration = totalDuration,
+                    volumeLevel = volumeLevel,
+                    onVolumeChange = { setVolume(it) },
+                    onRestart = { restartMusic() }
                 )
+            }
+            composable(Routes.CAVE_APP) {
+                Box(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.Text("BEM-VINDO À CAVE.", color = androidx.compose.ui.graphics.Color.Red)
+                }
             }
         }
 

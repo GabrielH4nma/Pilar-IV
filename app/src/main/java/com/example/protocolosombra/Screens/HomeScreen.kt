@@ -1,7 +1,9 @@
 package com.example.protocolosombra.ui
 
+import androidx.compose.animation.animateColor // Added import
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border // Added import
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -10,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +31,94 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun HomeScreen(
+    onNavigateToChat: () -> Unit,
+    onNavigateToGallery: () -> Unit,
+    onNavigateToBank: () -> Unit,
+    onNavigateToNotes: () -> Unit,
+    onNavigateToTracker: () -> Unit,
+    onNavigateToSiteCam: () -> Unit,
+    onNavigateToEmail: () -> Unit,
+    onNavigateToRadio: () -> Unit,
+    onNavigateToCave: () -> Unit = {} // Nova navegação (opcional por agora)
+) {
+    // Verifica se o sistema "reiniciou" (Ato 2)
+    val isSystemRebooted = GameData.isSystemRebooted.value
+
+    if (isSystemRebooted) {
+        HauntedHomeScreen(onNavigateToCave)
+    } else {
+        NormalHomeScreen(
+            onNavigateToChat, onNavigateToGallery, onNavigateToBank,
+            onNavigateToNotes, onNavigateToTracker, onNavigateToSiteCam,
+            onNavigateToEmail, onNavigateToRadio
+        )
+    }
+}
+
+@Composable
+fun HauntedHomeScreen(onNavigateToCave: () -> Unit) {
+    // Fundo vermelho escuro/preto pulsante
+    val infiniteTransition = rememberInfiniteTransition(label = "haunted_bg")
+    val bgColor by infiniteTransition.animateColor(
+        initialValue = Color(0xFF1A0000),
+        targetValue = Color(0xFF330000),
+        animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "bg_color"
+    )
+
+    Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
+        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            FakeStatusBar() // Talvez com texto corrompido no futuro?
+
+            Spacer(modifier = Modifier.height(100.dp))
+
+            // Relógio "Parado" ou Glitch
+            Text(
+                "00:00",
+                color = Color.Red,
+                fontSize = 80.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
+            Text(
+                "DOMINGO ETERNO",
+                color = Color(0xFFB71C1C),
+                fontSize = 16.sp,
+                letterSpacing = 4.sp
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // A ÚNICA APP DISPONÍVEL
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.clickable { onNavigateToCave() }
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Color.Red, RoundedCornerShape(20.dp))
+                        .border(2.dp, Color.White, RoundedCornerShape(20.dp))
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(50.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("A CAVE", color = Color.Red, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun NormalHomeScreen(
     onNavigateToChat: () -> Unit,
     onNavigateToGallery: () -> Unit,
     onNavigateToBank: () -> Unit,
@@ -134,6 +225,7 @@ fun HomeScreen(
     }
 }
 
+// ... Resto das funções auxiliares (AppIcon, SystemInstallationDialog) mantêm-se iguais ...
 @Composable
 fun AppIcon(
     name: String,
@@ -199,5 +291,14 @@ fun SystemInstallationDialog(onFinished: () -> Unit) {
             Text(text, color = titleColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(bottom = 20.dp))
             LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth().height(8.dp), color = titleColor, trackColor = Color.Black)
         }
+    }
+}
+
+@Composable
+fun InvisibleAppIcon() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
+        Box(modifier = Modifier.size(60.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = "Placeholder", color = Color.Transparent, fontSize = 14.sp)
     }
 }
