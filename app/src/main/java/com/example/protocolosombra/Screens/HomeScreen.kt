@@ -1,9 +1,9 @@
 package com.example.protocolosombra.ui
 
-import androidx.compose.animation.animateColor // Added import
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border // Added import
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -39,9 +39,8 @@ fun HomeScreen(
     onNavigateToSiteCam: () -> Unit,
     onNavigateToEmail: () -> Unit,
     onNavigateToRadio: () -> Unit,
-    onNavigateToCave: () -> Unit = {} // Nova navegação (opcional por agora)
+    onNavigateToCave: () -> Unit = {}
 ) {
-    // Verifica se o sistema "reiniciou" (Ato 2)
     val isSystemRebooted = GameData.isSystemRebooted.value
 
     if (isSystemRebooted) {
@@ -57,7 +56,6 @@ fun HomeScreen(
 
 @Composable
 fun HauntedHomeScreen(onNavigateToCave: () -> Unit) {
-    // Fundo vermelho escuro/preto pulsante
     val infiniteTransition = rememberInfiniteTransition(label = "haunted_bg")
     val bgColor by infiniteTransition.animateColor(
         initialValue = Color(0xFF1A0000),
@@ -68,11 +66,10 @@ fun HauntedHomeScreen(onNavigateToCave: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            FakeStatusBar() // Talvez com texto corrompido no futuro?
+            FakeStatusBar()
 
             Spacer(modifier = Modifier.height(100.dp))
 
-            // Relógio "Parado" ou Glitch
             Text(
                 "00:00",
                 color = Color.Red,
@@ -89,7 +86,6 @@ fun HauntedHomeScreen(onNavigateToCave: () -> Unit) {
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // A ÚNICA APP DISPONÍVEL
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable { onNavigateToCave() }
@@ -225,7 +221,6 @@ fun NormalHomeScreen(
     }
 }
 
-// ... Resto das funções auxiliares (AppIcon, SystemInstallationDialog) mantêm-se iguais ...
 @Composable
 fun AppIcon(
     name: String,

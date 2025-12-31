@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
                     editor.apply()
                 },
                 finishApp = {
-                    finishAndRemoveTask() // Fecha a app e remove da lista de recentes
+                    finishAndRemoveTask()
                 }
             )
         }
@@ -89,7 +89,7 @@ fun GameNavigation(saveRebootState: () -> Unit = {}, finishApp: () -> Unit = {})
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // Função local para tocar sons na MainActivity (necessária para as mensagens do Chefe)
+    // Função local para tocar sons na MainActivity
     fun playSound(fileName: String) {
         val resId = context.resources.getIdentifier(fileName, "raw", context.packageName)
         if (resId != 0) {
@@ -245,39 +245,38 @@ fun GameNavigation(saveRebootState: () -> Unit = {}, finishApp: () -> Unit = {})
 
             if (chefeContact != null) {
                 delay(5000)
-                playSound("received") // SOM DE MENSAGEM
+                playSound("received")
                 chefeContact.history.add(Message(content = "Sofia?", isFromPlayer = false, timestamp = "Agora"))
                 GameData.notificationContent.value = "Chefe: Sofia?"
                 GameData.showNotificationPopup.value = true
 
                 delay(3000)
-                playSound("received") // SOM DE MENSAGEM
+                playSound("received")
                 chefeContact.history.add(Message(content = "De que estás a falar?", isFromPlayer = false, timestamp = "Agora"))
 
                 delay(4000)
-                playSound("received") // SOM DE MENSAGEM
+                playSound("received")
                 chefeContact.history.add(Message(content = "Eu estou na obra agora", isFromPlayer = false, timestamp = "Agora"))
 
                 delay(2000)
-                playSound("received") // SOM DE MENSAGEM
+                playSound("received")
                 chefeContact.history.add(Message(content = "Na cave", isFromPlayer = false, timestamp = "Agora"))
 
                 delay(3000)
-                playSound("received") // SOM DE MENSAGEM
+                playSound("received")
                 chefeContact.history.add(Message(content = "Não há nenhum pilar 4", isFromPlayer = false, timestamp = "Agora"))
 
                 delay(3000)
-                playSound("received") // SOM DE MENSAGEM
+                playSound("received")
                 chefeContact.history.add(Message(content = "O projeto foi alterado há meses", isFromPlayer = false, timestamp = "Agora"))
 
                 delay(3000)
-                playSound("received") // SOM DE MENSAGEM
+                playSound("received")
                 chefeContact.history.add(Message(content = "", isFromPlayer = false, timestamp = "Agora", imageResId = R.drawable.cave_empty))
                 GameData.notificationContent.value = "Chefe enviou uma foto."
                 GameData.showNotificationPopup.value = true
             }
 
-            // SÓ AGORA desbloqueamos o chat da Sofia
             delay(5000)
             GameData.isSofiaChatUnlocked.value = true
 
@@ -290,13 +289,8 @@ fun GameNavigation(saveRebootState: () -> Unit = {}, finishApp: () -> Unit = {})
 
             if (GameData.getContact("sofia_ghost") == null) {
                 GameData.contacts.add(0, sofiaContact)
-
-                // REMOVIDO: Notificação de novo contacto
-                // O jogador tem de ir procurar na lista de chats
-
-                // playSound("received") // Removido som de notificação também
-                // GameData.notificationContent.value = "Novo contacto: Eu (Sofia)"
-                // GameData.showNotificationPopup.value = true
+                playSound("received")
+                // Sem notificação popup, o jogador tem de procurar
             }
         }
     }
@@ -331,15 +325,13 @@ fun GameNavigation(saveRebootState: () -> Unit = {}, finishApp: () -> Unit = {})
         }
     }
 
-    // GATILHO PARA O REINÍCIO (FALSO CRASH) E FECHO DA APP
     LaunchedEffect(GameData.isGameFinished.value) {
         if (GameData.isGameFinished.value && !GameData.isSystemRebooted.value) {
             stopRadio()
             GameData.isSystemRebooted.value = true
             saveRebootState()
 
-            // Em vez de navegar para a Home, fechamos a app (Crash Simulado)
-            delay(1000) // Pequeno atraso para o efeito de glitch assentar
+            delay(1000)
             finishApp()
         }
     }
@@ -386,9 +378,8 @@ fun GameNavigation(saveRebootState: () -> Unit = {}, finishApp: () -> Unit = {})
                 )
             }
             composable(Routes.CAVE_APP) {
-                Box(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.Text("BEM-VINDO À CAVE.", color = androidx.compose.ui.graphics.Color.Red)
-                }
+                // AQUI ESTÁ A LIGAÇÃO PARA O NOVO ECRÃ
+                CaveGameScreen()
             }
         }
 
