@@ -221,6 +221,7 @@ fun NormalHomeScreen(
     }
 }
 
+// ... Resto das funções auxiliares (AppIcon, SystemInstallationDialog) mantêm-se iguais ...
 @Composable
 fun AppIcon(
     name: String,

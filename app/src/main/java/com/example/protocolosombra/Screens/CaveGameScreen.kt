@@ -4,28 +4,34 @@ import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 enum class CaveState {
     BOOT,
@@ -54,6 +60,9 @@ fun CaveGameScreen() {
     var textToShow by remember { mutableStateOf("") }
     var isTyping by remember { mutableStateOf(false) }
 
+    // Novo estado para controlar a corrupção do Final B
+    var isFinalBCorrupted by remember { mutableStateOf(false) }
+
     // Players de áudio
     val ambiencePlayer = remember { mutableStateOf<MediaPlayer?>(null) }
     val typingPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
@@ -66,7 +75,7 @@ fun CaveGameScreen() {
                 if (ambiencePlayer.value == null) {
                     val mp = MediaPlayer.create(context, resId)
                     mp.isLooping = true
-                    mp.setVolume(0.6f, 0.6f) // Volume moderado para dar tensão
+                    mp.setVolume(0.6f, 0.6f)
                     mp.start()
                     ambiencePlayer.value = mp
                 }
@@ -80,13 +89,10 @@ fun CaveGameScreen() {
         val resId = context.resources.getIdentifier(soundName, "raw", context.packageName)
         if (resId != 0) {
             try {
-                // Se já estiver a tocar o MESMO som, deixa continuar.
-                // Se não estiver a tocar, inicia.
                 if (typingPlayer.value?.isPlaying == true) return
 
                 val mp = MediaPlayer.create(context, resId)
                 mp.start()
-                // Limpa quando acaba naturalmente
                 mp.setOnCompletionListener {
                     it.release()
                     if (typingPlayer.value == it) typingPlayer.value = null
@@ -96,7 +102,6 @@ fun CaveGameScreen() {
         }
     }
 
-    // Função para PARAR o som de escrita imediatamente
     fun stopTypingSound() {
         try {
             if (typingPlayer.value?.isPlaying == true) {
@@ -107,12 +112,10 @@ fun CaveGameScreen() {
         } catch (e: Exception) {}
     }
 
-    // Inicializa ambiente
     LaunchedEffect(Unit) {
         playAmbience()
     }
 
-    // Limpeza ao sair (embora nunca se saia realmente...)
     DisposableEffect(Unit) {
         onDispose {
             try {
@@ -300,38 +303,61 @@ fun CaveGameScreen() {
             [ FIM DO JOGO - FINAL B: O MÁRTIR DE BETÃO ]
         """.trimIndent()
 
-        // Final C (Secreto) não incluído nas opções padrão para manter fidelidade
+        CaveState.FINAL_C -> """
+            > CHAVE CRIPTOGRÁFICA ACEITE.
+            > EXECUTANDO PROTOCOLO SAMSON...
+            
+            O sistema treme. Ouve-se um zumbido de 440hz.
+            O betão começa a rachar. O Pilar IV entra em ressonância destrutiva.
+            
+            VOZ (SOFIA): "Sim... SIM! Vamos deitar tudo abaixo!"
+            
+            > O teto colapsa sobre ti e sobre o Homem do Casaco Vermelho.
+            > Não há mais dor.
+            > Apenas o som de milhões de toneladas a cair por terra.
+            
+            [ FIM DO JOGO - FINAL SECRETO: A DEMOLIÇÃO ]
+        """.trimIndent()
+
         else -> ""
     }
 
-    // Efeito de escrita (typewriter) com controlo de som
     LaunchedEffect(fullText) {
         textToShow = ""
         isTyping = true
 
-        // Determina se a cena é tensa para usar som "Hard"
         val isTenseScene = gameState == CaveState.PERSEGUICAO || gameState == CaveState.NUCLEO || gameState == CaveState.CLIMAX
         val charDelay = if (gameState == CaveState.BOOT) 50L else 30L
 
         fullText.forEach { char ->
             textToShow += char
 
-            // Toca som a cada 3 caracteres para não saturar
             if (textToShow.length % 3 == 0) {
                 playTypingSound(isTenseScene)
             }
 
-            // Pausas dramáticas
             if (char == '\n') delay(200L)
             else if (char == '.' || char == '?' || char == '!') delay(150L)
             else delay(charDelay)
         }
 
-        // O texto acabou de ser escrito -> PARAR SOM IMEDIATAMENTE
         isTyping = false
         stopTypingSound()
 
-        // Transições automáticas para criar ritmo
+        // --- EFEITO ESPECIAL PARA O FINAL B ---
+        if (gameState == CaveState.FINAL_B) {
+            delay(2000) // Espera um pouco com a imagem normal
+            // Simula glitch sonoro
+            val resId = context.resources.getIdentifier("static_burst", "raw", context.packageName)
+            if (resId != 0) {
+                val mp = MediaPlayer.create(context, resId)
+                mp.start()
+            }
+            // Troca para a imagem corrompida
+            isFinalBCorrupted = true
+        }
+
+        // Transições automáticas
         if (gameState == CaveState.BOOT) {
             delay(1500)
             gameState = CaveState.INTRO
@@ -353,23 +379,55 @@ fun CaveGameScreen() {
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Top
     ) {
-        // Visual (Wireframe / Arte ASCII)
+        // ÁREA VISUAL
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
                 .padding(bottom = 16.dp)
-                .background(Color(0xFF050505), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0xFF003300), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                .background(Color(0xFF050505), RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF003300), RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
-            SofiaWireframe(gameState)
+            if (gameState == CaveState.BOOT) {
+                BootAnimation()
+            } else {
+                val imageResName = when(gameState) {
+                    CaveState.INTRO -> "cave_hand_wires"
+                    CaveState.ESCOLHA_1, CaveState.LABIRINTO -> "cave_hallway"
+                    CaveState.ROTA_A -> "cave_xray"
+                    CaveState.ROTA_B -> "cave_boots_melted"
+                    CaveState.PERSEGUICAO -> "cave_red_coat_silhouette"
+                    CaveState.NUCLEO, CaveState.CLIMAX -> "cave_sofia_face_wall"
+                    CaveState.FINAL_A -> "cave_face_petrified"
+                    CaveState.FINAL_B -> if (isFinalBCorrupted) "cave_binary_code2" else "cave_binary_code" // Troca dinâmica
+                    CaveState.FINAL_C -> "cave_building_collapse"
+                    else -> null
+                }
+
+                if (imageResName != null) {
+                    val imageResId = context.resources.getIdentifier(imageResName, "drawable", context.packageName)
+                    if (imageResId != 0) {
+                        Image(
+                            painter = painterResource(id = imageResId),
+                            contentDescription = "Visual da Cave",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        ScanlinesOverlay()
+                    } else {
+                        Text("IMAGEM: $imageResName", color = Color.Red)
+                    }
+                }
+            }
         }
 
         // Texto do Terminal
         Text(
             text = textToShow,
-            color = if (gameState == CaveState.PERSEGUICAO) Color.Red else Color(0xFF00FF00), // Vermelho em perigo
+            color = if (gameState == CaveState.PERSEGUICAO) Color.Red else Color(0xFF00FF00),
             fontFamily = FontFamily.Monospace,
             fontSize = 14.sp,
             lineHeight = 20.sp,
@@ -377,7 +435,6 @@ fun CaveGameScreen() {
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Cursor
         if (isTyping) {
             val cursorAlpha by rememberInfiniteTransition(label = "cursor").animateFloat(
                 initialValue = 0f, targetValue = 1f,
@@ -388,7 +445,7 @@ fun CaveGameScreen() {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Opções de Escolha (Só aparecem quando o texto acaba)
+        // Opções de Escolha
         if (!isTyping) {
             when (gameState) {
                 CaveState.INTRO -> {
@@ -409,10 +466,11 @@ fun CaveGameScreen() {
                 CaveState.CLIMAX -> {
                     CaveOption("[COMANDO: /OPEN_DOORS_EMERGENCY] (Sacrificar Sofia)") { gameState = CaveState.FINAL_A }
                     CaveOption("[COMANDO: /UPLOAD_DATA_SERVER_PUBLIC] (Salvar a verdade)") { gameState = CaveState.FINAL_B }
+                    // CaveOption("/EXECUTE_PROTOCOL_SAMSON") { gameState = CaveState.FINAL_C } // Secreto
                 }
-                CaveState.FINAL_A, CaveState.FINAL_B -> {
+                CaveState.FINAL_A, CaveState.FINAL_B, CaveState.FINAL_C -> {
                     Text(
-                        text = "> CONEXÃO PERDIDA.",
+                        text = "> SISTEMA DESLIGADO.",
                         color = Color.Red,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.padding(top = 16.dp)
@@ -426,13 +484,14 @@ fun CaveGameScreen() {
     }
 }
 
+// ... (Resto das funções auxiliares CaveOption, BootAnimation, ScanlinesOverlay mantêm-se iguais) ...
 @Composable
 fun CaveOption(text: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .border(1.dp, Color(0xFF005500), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+            .border(1.dp, Color(0xFF005500), RoundedCornerShape(4.dp))
             .clickable { onClick() }
             .padding(16.dp)
     ) {
@@ -447,59 +506,39 @@ fun CaveOption(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun SofiaWireframe(state: CaveState) {
-    val infiniteTransition = rememberInfiniteTransition(label = "sofia_idle")
-
-    val breathScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "breath"
+fun BootAnimation() {
+    val infiniteTransition = rememberInfiniteTransition(label = "boot")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "alpha"
     )
 
-    // Cores visuais de acordo com o estado
-    val wireColor = when(state) {
-        CaveState.PERSEGUICAO, CaveState.ESCONDER, CaveState.CORRER, CaveState.FINAL_B, CaveState.FINAL_A -> Color.Red
-        CaveState.CLIMAX -> Color.Yellow
-        else -> Color.Green
-    }
-
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        val centerX = w / 2
-        val centerY = h / 2
+        drawCircle(
+            color = Color(0xFF00FF00).copy(alpha = alpha),
+            radius = 10f,
+            center = center
+        )
+        // Círculos concêntricos
+        drawCircle(
+            color = Color(0xFF00FF00).copy(alpha = alpha * 0.5f),
+            radius = 30f,
+            center = center,
+            style = Stroke(width = 2f)
+        )
+    }
+}
 
-        scale(scale = breathScale, pivot = center) {
-            if (state == CaveState.BOOT) {
-                // Boot: Apenas um ponto a piscar ou expandir
-                drawCircle(color = wireColor, radius = 2f, center = center)
-            } else if (state == CaveState.PERSEGUICAO) {
-                // Perseguição: Silhueta ameaçadora (simples)
-                drawCircle(color = wireColor, radius = 50f, center = center, style = Stroke(width = 2f))
-                drawLine(color = wireColor, start = Offset(centerX - 20f, centerY - 20f), end = Offset(centerX - 10f, centerY - 10f), strokeWidth = 3f)
-                drawLine(color = wireColor, start = Offset(centerX + 20f, centerY - 20f), end = Offset(centerX + 10f, centerY - 10f), strokeWidth = 3f)
-            } else {
-                // Sofia: Silhueta wireframe
-                val path = Path().apply {
-                    moveTo(centerX, centerY - 40f)
-                    cubicTo(centerX + 30f, centerY - 40f, centerX + 30f, centerY + 10f, centerX, centerY + 20f)
-                    cubicTo(centerX - 30f, centerY + 10f, centerX - 30f, centerY - 40f, centerX, centerY - 40f)
-
-                    moveTo(centerX, centerY + 20f)
-                    lineTo(centerX, centerY + 60f)
-
-                    moveTo(centerX - 30f, centerY + 30f)
-                    lineTo(centerX + 30f, centerY + 30f)
-                }
-
-                drawPath(path = path, color = wireColor, style = Stroke(width = 1.5f))
-                // Olhos
-                drawCircle(color = wireColor, radius = 2f, center = Offset(centerX - 10f, centerY - 15f))
-                drawCircle(color = wireColor, radius = 2f, center = Offset(centerX + 10f, centerY - 15f))
-            }
+@Composable
+fun ScanlinesOverlay() {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val lineHeight = 4.dp.toPx()
+        for (y in 0..size.height.toInt() step lineHeight.toInt() * 2) {
+            drawRect(
+                color = Color.Black.copy(alpha = 0.3f),
+                topLeft = Offset(0f, y.toFloat()),
+                size = androidx.compose.ui.geometry.Size(size.width, lineHeight)
+            )
         }
     }
 }
