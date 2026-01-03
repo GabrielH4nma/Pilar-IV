@@ -8,66 +8,85 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import com.example.protocolosombra.R
 
 enum class CaveState {
     BOOT,
     INTRO,
-    ESCOLHA_1, // Ping ou Diagnóstico
-    LABIRINTO, // Decisão da Rota (A ou B)
-    ROTA_A, // Clínica
-    ROTA_B, // Obra
-    PERSEGUICAO, // Encontro com o Homem do Casaco Vermelho
+    ESCOLHA_1,
+    LABIRINTO,
+    ROTA_A,
+    ROTA_B,
+    PERSEGUICAO,
     ESCONDER,
     CORRER,
-    NUCLEO, // Encontro com a Sofia
-    CLIMAX, // A escolha final
-    FINAL_A, // Sobrevivente Cobarde
-    FINAL_B, // Mártir de Betão
-    FINAL_C // Demolição (Secreto - Requer lógica extra no futuro)
+    NUCLEO,
+    CLIMAX,
+    FINAL_A,
+    FINAL_B,
+    FINAL_C
 }
 
 @Composable
 fun CaveGameScreen() {
     val context = LocalContext.current
-    // Bloqueia o botão de voltar: NÃO HÁ SAÍDA
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
     BackHandler(enabled = true) { }
 
     var gameState by remember { mutableStateOf(CaveState.BOOT) }
-    var textToShow by remember { mutableStateOf("") }
-    var isTyping by remember { mutableStateOf(false) }
 
-    // Novo estado para controlar a corrupção do Final B
+    // Controlo de Narrativa
+    var currentDialogueLines by remember { mutableStateOf(listOf<String>()) }
+    val displayedLines = remember { mutableStateListOf<String>() }
+    var nextLineIndex by remember { mutableStateOf(0) }
+    var isTyping by remember { mutableStateOf(false) }
+    var showOptions by remember { mutableStateOf(false) }
+
+    // Efeitos Visuais
     var isFinalBCorrupted by remember { mutableStateOf(false) }
+    val shakeOffset = remember { Animatable(0f) }
+    val redFlashAlpha = remember { Animatable(0f) }
+
+    // Variáveis para a Sequência Final (Blackout)
+    val blackoutAlpha = remember { Animatable(0f) }
+    var finalMessage by remember { mutableStateOf("") }
+    var finalMessageColor by remember { mutableStateOf(Color.White) }
 
     // Players de áudio
     val ambiencePlayer = remember { mutableStateOf<MediaPlayer?>(null) }
     val typingPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
 
-    // Função para tocar som de fundo (Ambiente - Zumbido 19Hz)
+    // --- FUNÇÕES DE ÁUDIO ---
     fun playAmbience() {
         val resId = context.resources.getIdentifier("cave_ambience", "raw", context.packageName)
         if (resId != 0) {
@@ -83,408 +102,448 @@ fun CaveGameScreen() {
         }
     }
 
-    // Função para tocar som de escrita (Typing)
-    fun playTypingSound(isHard: Boolean) {
+    // Inicia o som de escrita em loop
+    fun startTypingSound(isHard: Boolean) {
         val soundName = if (isHard) "terminal_typing_hard" else "terminal_typing"
         val resId = context.resources.getIdentifier(soundName, "raw", context.packageName)
         if (resId != 0) {
             try {
-                if (typingPlayer.value?.isPlaying == true) return
-
-                val mp = MediaPlayer.create(context, resId)
-                mp.start()
-                mp.setOnCompletionListener {
-                    it.release()
-                    if (typingPlayer.value == it) typingPlayer.value = null
+                if (typingPlayer.value == null) {
+                    typingPlayer.value = MediaPlayer.create(context, resId).apply {
+                        isLooping = true // Loop contínuo enquanto escreve
+                        setVolume(0.8f, 0.8f)
+                        start()
+                    }
+                } else if (typingPlayer.value?.isPlaying == false) {
+                    typingPlayer.value?.start()
                 }
-                typingPlayer.value = mp
             } catch (e: Exception) {}
         }
     }
 
+    // Para o som de escrita imediatamente
     fun stopTypingSound() {
         try {
             if (typingPlayer.value?.isPlaying == true) {
-                typingPlayer.value?.stop()
+                typingPlayer.value?.pause()
+                typingPlayer.value?.seekTo(0)
             }
-            typingPlayer.value?.release()
-            typingPlayer.value = null
         } catch (e: Exception) {}
     }
 
-    LaunchedEffect(Unit) {
-        playAmbience()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            try {
-                ambiencePlayer.value?.stop()
-                ambiencePlayer.value?.release()
-                typingPlayer.value?.stop()
-                typingPlayer.value?.release()
-            } catch (e: Exception) {}
-        }
-    }
-
-    // Texto do guião
-    val fullText = when (gameState) {
-        CaveState.BOOT -> """
-            > INICIANDO SISTEMA DE SEGURANÇA KRONOS v.4.0...
-            > ERRO CRÍTICO: KERNEL DE MEMÓRIA CORROMPIDO.
-            > TENTATIVA DE RECUPERAÇÃO DE DADOS...
-            > ACEDENDO AO SETOR: "SOFIA_MENDES_CONSCIOUSNESS.DAT"
-            
-            > Sincronização Neural: 12%... 45%... 100%.
-        """.trimIndent()
-
-        CaveState.INTRO -> """
-            Tu não estás no teu corpo.
-            Onde deviam estar as tuas mãos, sentes apenas frio.
-            Onde deviam estar os teus pulmões, sentes pó de pedra.
-            O ar é pesado.
-            Cheira a humidade antiga e a cobre queimado.
-            
-            [IMAGEM: INTERFERÊNCIA - MÃO DE CABOS ELÉTRICOS]
-            
-            Uma voz ecoa na tua cabeça. É um pensamento... que não é teu.
-            
-            VOZ (SOFIA): "Eles... não me deixam... dormir."
-            
-            > O sistema oferece-te um comando básico.
-        """.trimIndent()
-
-        CaveState.ESCOLHA_1 -> """
-            > COMANDO ACEITE.
-            
-            O corredor à tua frente estica-se infinitamente.
-            As luzes de emergência piscam num ritmo cardíaco.
-            TUM-TUM. TUM-TUM.
-            
-            VOZ (SOFIA): "O Dr. Luz disse que era stress. Disse que o prédio não falava. Mas eu ouvia-o. Ele tem fome."
-            
-            Chegas a uma bifurcação na memória da Sofia.
-            O caminho divide-se em dois traumas distintos.
-        """.trimIndent()
-
-        CaveState.ROTA_A -> """
-            O chão muda de betão bruto para azulejos brancos imaculados.
-            Mas estão escorregadios.
-            Não é água. É um líquido viscoso e transparente.
-            
-            [IMAGEM: INTERFERÊNCIA - RADIOGRAFIA COM ESTRUTURA DE FERRO]
-            
-            Encontras um relatório médico no chão.
-            Paciente: Sofia M | Sintomas: Paranoia | Tratamento: Composto K-7 (Experimental).
-            
-            Sentes uma picada no braço.
-            Ele estava a preparar o corpo dela para aceitar o enxerto.
-            Uma agulha que já não existe.
-            
-            VOZ (SOFIA): "O remédio fazia o zumbido parar... mas fazia as paredes aproximarem-se. Ele sabia. Ele sempre soube."
-        """.trimIndent()
-
-        CaveState.ROTA_B -> """
-            O ambiente fica escuro.
-            O cheiro a terra molhada é sufocante.
-            Vês capacetes de proteção amarelos semi-enterrados no chão, como crânios fósseis.
-            
-            [IMAGEM: INTERFERÊNCIA - BOTA FUNDIDA COM O CHÃO]
-            
-            Encontras a ferramenta de nível do Tiago.
-            Está dobrada ao meio, como se o metal tivesse derretido.
-            
-            Ouve-se o som de uma betoneira a girar.
-            Mas o som é húmido. Como se não estivesse a bater pedra.
-            
-            VOZ (SOFIA): "O Tiago encontrou dentes na mistura, dentes humanos...
-            Ele quis ir à polícia.
-            Foi... engolido... nessa mesma noite."
-        """.trimIndent()
-
-        CaveState.PERSEGUICAO -> """
-            > ALERTA DE PROXIMIDADE
-            > DETETADA ENTIDADE HOSTIL
-            > NÍVEL DE AMEAÇA: EXTREMO
-            
-            Ouvem-se passos. Pesados. Lentos.
-            O som de botas de couro a arrastar em vidro partido.
-            Ele não corre. Ele não precisa.
-            
-            [IMAGEM: INTERFERÊNCIA - SILHUETA CASACO VERMELHO]
-            
-            Tu estás fisicamente escondido num poço de elevador desativado, a segurar o telemóvel.
-            Mas na rede neural, ele consegue cheirar o teu medo (cortisol).
-            
-            VOZ (SOFIA): "Ele é o sistema imunitário do prédio, nós somos o vírus. Foge!"
-        """.trimIndent()
-
-        CaveState.ESCONDER -> """
-            > Desligas os processos não essenciais.
-            > Ficas no escuro.
-            > Os passos passam por ti... param... e continuam.
-            
-            Sobreviveste, mas a bateria caiu 10%.
-        """.trimIndent()
-
-        CaveState.CORRER -> """
-            > Corres pelos cabos de fibra ótica.
-            > Sentes o calor do processador.
-            > O Homem do Casaco Vermelho tenta agarrar o teu sinal, mas és mais rápido.
-            
-            Escapas, mas o sistema sobreaquece.
-        """.trimIndent()
-
-        CaveState.NUCLEO -> """
-            Chegaste ao centro. O Pilar Mestre.
-            Aqui, a realidade desfaz-se.
-            Não há paredes.
-            Há apenas uma massa pulsante de betão cinzento, ferro enferrujado e... bioluminescência.
-            
-            [IMAGEM: INTERFERÊNCIA - ROSTO DE SOFIA NO BETÃO]
-            
-            Ela está à tua frente.
-            Metade mulher, metade arquitetura.
-            Fios de cobre entram pelas suas têmporas.
-            A boca dela não se mexe, mas a voz está em todo o lado.
-            
-            VOZ (SOFIA): "Estás a ver? É lindo... e terrível. Eu sou a fundação. Eu seguro os 40 andares. Sinto cada pessoa que caminha lá em cima, sinto as discussões, os amores, o medo."
-            
-            *O telemóvel vibra violentamente.*
-            A bateria está crítica (2%).
-            O Homem do Casaco Vermelho encontrou a tua localização física.
-            Ele está a bater na porta de metal do poço do elevador onde estás.
-            BANG. BANG. BANG.
-            
-            VOZ (SOFIA): "Tens pouco tempo. O meu acesso de administrador ainda funciona. Posso fazer uma coisa por ti. Só uma."
-        """.trimIndent()
-
-        CaveState.CLIMAX -> """
-            A porta está a ceder.
-            *O metal range*
-            *O ecrã mostra duas linhas de código final*
-        """.trimIndent()
-
-        CaveState.FINAL_A -> """
-            > CONFIRMAR? ISTO IRÁ DRENAR A ENERGIA RESTANTE DO NÚCLEO.
-            > COMANDO ACEITE.
-            
-            Ouve-se um silvo hidráulico.
-            As portas do lobby, 20 andares abaixo, destrancam-se.
-            As luzes de emergência acendem-se, cegando o Homem do Casaco Vermelho momentaneamente.
-            
-            VOZ (SOFIA): "Ah... eu percebo. Tu queres viver. Corre. Não olhes para trás."
-            
-            [IMAGEM: INTERFERÊNCIA - ROSTO PETRIFICADO]
-            
-            O telemóvel morre.
-            Estás no escuro, mas a porta de saída está aberta.
-            Tu corres.
-            
-            [ FIM DO JOGO - FINAL A: O SOBREVIVENTE COBARDE ]
-        """.trimIndent()
-
-        CaveState.FINAL_B -> """
-            > CONECTANDO AO SERVIDOR GLOBAL...
-            > TRANSFERÊNCIA DE MASSA INICIADA.
-            
-            A porta do poço do elevador abre-se.
-            O Homem do Casaco Vermelho entra. Ele é enorme. Cheira a ozono e sangue velho.
-            
-            VOZ (SOFIA): "Obrigada, agora eu posso descansar."
-            
-            > UPLOAD: 100%.
-            > O Homem levanta a mão de betão para te esmagar.
-            > Tu fechas os olhos.
-            > Mas a dor não vem. Sentes... expansão. A tua mente sai do corpo e entra na rede.
-            
-            [IMAGEM: INTERFERÊNCIA - CÓDIGO BINÁRIO "BEM-VINDO A CASA"]
-            
-            [ FIM DO JOGO - FINAL B: O MÁRTIR DE BETÃO ]
-        """.trimIndent()
-
-        CaveState.FINAL_C -> """
-            > CHAVE CRIPTOGRÁFICA ACEITE.
-            > EXECUTANDO PROTOCOLO SAMSON...
-            
-            O sistema treme. Ouve-se um zumbido de 440hz.
-            O betão começa a rachar. O Pilar IV entra em ressonância destrutiva.
-            
-            VOZ (SOFIA): "Sim... SIM! Vamos deitar tudo abaixo!"
-            
-            > O teto colapsa sobre ti e sobre o Homem do Casaco Vermelho.
-            > Não há mais dor.
-            > Apenas o som de milhões de toneladas a cair por terra.
-            
-            [ FIM DO JOGO - FINAL SECRETO: A DEMOLIÇÃO ]
-        """.trimIndent()
-
-        else -> ""
-    }
-
-    LaunchedEffect(fullText) {
-        textToShow = ""
+    // --- FUNÇÃO DE EFEITO DE ESCRITA (TYPEWRITER) MELHORADA ---
+    suspend fun typeText(text: String) {
         isTyping = true
+        displayedLines.add("")
+        val currentIndex = displayedLines.lastIndex
 
-        val isTenseScene = gameState == CaveState.PERSEGUICAO || gameState == CaveState.NUCLEO || gameState == CaveState.CLIMAX
-        val charDelay = if (gameState == CaveState.BOOT) 50L else 30L
+        // Inicia o áudio
+        startTypingSound(gameState == CaveState.PERSEGUICAO)
 
-        fullText.forEach { char ->
-            textToShow += char
+        text.forEachIndexed { index, char ->
+            displayedLines[currentIndex] = displayedLines[currentIndex] + char
 
-            if (textToShow.length % 3 == 0) {
-                playTypingSound(isTenseScene)
+            // Lógica de Ritmo:
+            // 1. Pausa em pontuação para realismo
+            val punctuationDelay = if (char in listOf('.', '!', '?', ':')) 200L else 0L
+            // 2. Hesitação aleatória humana
+            val randomJitter = Random.nextLong(10, 50)
+            // 3. Velocidade base (mais rápido em perseguição)
+            val baseSpeed = if (gameState == CaveState.PERSEGUICAO) 10L else 30L
+
+            delay(baseSpeed + randomJitter + punctuationDelay)
+
+            // Vibração em palavras chave ou fim de frases tensas
+            if (gameState == CaveState.PERSEGUICAO && (char == '!' || char == '.')) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
-
-            if (char == '\n') delay(200L)
-            else if (char == '.' || char == '?' || char == '!') delay(150L)
-            else delay(charDelay)
         }
 
-        isTyping = false
+        // Corta o som imediatamente ao acabar a linha
         stopTypingSound()
+        isTyping = false
+    }
 
-        // --- EFEITO ESPECIAL PARA O FINAL B ---
-        if (gameState == CaveState.FINAL_B) {
-            delay(2000) // Espera um pouco com a imagem normal
-            // Simula glitch sonoro
-            val resId = context.resources.getIdentifier("static_burst", "raw", context.packageName)
-            if (resId != 0) {
-                val mp = MediaPlayer.create(context, resId)
-                mp.start()
+    // --- EFEITOS DE AMBIENTE ---
+    LaunchedEffect(gameState) {
+        // Tremor
+        launch {
+            if (gameState == CaveState.PERSEGUICAO || gameState == CaveState.CLIMAX) {
+                while (true) {
+                    shakeOffset.animateTo(3f, animationSpec = tween(50))
+                    shakeOffset.animateTo(-3f, animationSpec = tween(50))
+                    shakeOffset.animateTo(0f, animationSpec = tween(50))
+                    delay(Random.nextLong(100, 2500))
+                }
+            } else {
+                shakeOffset.snapTo(0f)
             }
-            // Troca para a imagem corrompida
+        }
+
+        // Flash Vermelho
+        launch {
+            if (gameState == CaveState.PERSEGUICAO) {
+                while(true) {
+                    redFlashAlpha.animateTo(0.2f, tween(100))
+                    redFlashAlpha.animateTo(0f, tween(300))
+                    delay(Random.nextLong(2000, 5000))
+                }
+            } else {
+                redFlashAlpha.snapTo(0f)
+            }
+        }
+    }
+
+    // --- SEQUÊNCIA DE FINAL (BLACKOUT) ---
+    LaunchedEffect(showOptions, gameState) {
+        if (showOptions && (gameState == CaveState.FINAL_A || gameState == CaveState.FINAL_B || gameState == CaveState.FINAL_C)) {
+            // Espera 5 segundos após o texto terminar
+            delay(5000)
+
+            // Define a mensagem final baseada no final escolhido
+            when (gameState) {
+                CaveState.FINAL_A -> {
+                    finalMessage = "RELATÓRIO KRONOS:\nSUJEITO 04 ESCAPOU.\nESTADO MENTAL: COMPROMETIDO."
+                    finalMessageColor = Color.LightGray
+                }
+                CaveState.FINAL_B -> {
+                    finalMessage = "> INTEGRAÇÃO COMPLETA.\n> BEM-VINDA À REDE, SOFIA."
+                    finalMessageColor = Color(0xFF00FF00) // Verde Matrix
+                }
+                CaveState.FINAL_C -> {
+                    finalMessage = "SINAL PERDIDO\n----------------\nSEM DADOS DE TELEMETRIA\nESTRUTURA COLAPSADA"
+                    finalMessageColor = Color(0xFFFF0000) // Vermelho Alerta
+                }
+                else -> {}
+            }
+
+            // Inicia o fade out para preto (3 segundos)
+            blackoutAlpha.animateTo(1f, animationSpec = tween(3000))
+        }
+    }
+
+    // --- CONTEÚDO DA NARRATIVA ---
+    fun loadSceneData(state: CaveState): List<String> {
+        return when (state) {
+            CaveState.BOOT -> listOf(
+                "> INICIANDO SISTEMA DE SEGURANÇA KRONOS v.4.0...",
+                "> KERNEL DE MEMÓRIA CORROMPIDO.",
+                "> RECUPERANDO SETOR: \"SOFIA_MENDES.DAT\"",
+                "> Sincronização Neural: 100%."
+            )
+            CaveState.INTRO -> listOf(
+                "Tu não estás no teu corpo.",
+                "Onde deviam estar as tuas mãos, sentes apenas frio.",
+                "Onde deviam estar os teus pulmões, sentes pó de pedra.",
+                "O ar é pesado. Cheira a humidade antiga e a cobre queimado.",
+                "Uma voz ecoa na tua cabeça...",
+                "VOZ (SOFIA): \"Eles... não me deixam... dormir.\""
+            )
+            CaveState.ESCOLHA_1 -> listOf(
+                "> ACESSO CONCEDIDO.",
+                "O corredor à tua frente estica-se infinitamente.",
+                "Luzes de emergência piscam num ritmo cardíaco.",
+                "TUM-TUM. TUM-TUM.",
+                "VOZ (SOFIA): \"O Dr. Luz disse que o prédio não falava.\"",
+                "VOZ (SOFIA): \"Mas ele tem fome.\"",
+                "Chegas a uma bifurcação na memória da Sofia."
+            )
+            CaveState.ROTA_A -> listOf(
+                "O chão muda para azulejos brancos imaculados.",
+                "Mas estão cobertos de um líquido viscoso.",
+                "Encontras um relatório médico no chão.",
+                "Paciente: Sofia M | Sintomas: Paranoia.",
+                "Sentes uma picada fantasma no braço.",
+                "Estavam a preparar o corpo dela para a fundação.",
+                "VOZ (SOFIA): \"O remédio fazia as paredes aproximarem-se.\""
+            )
+            CaveState.ROTA_B -> listOf(
+                "O ambiente fica escuro.",
+                "Vês capacetes de proteção enterrados no chão como crânios.",
+                "Encontras a ferramenta de nível do Tiago.",
+                "Está dobrada ao meio, derretida.",
+                "Ouve-se o som de uma betoneira... mas o som é húmido.",
+                "VOZ (SOFIA): \"O Tiago encontrou dentes na mistura...\""
+            )
+            CaveState.PERSEGUICAO -> listOf(
+                "> ALERTA: ENTIDADE HOSTIL DETETADA",
+                "Passos. Pesados. Lentos.",
+                "Botas de couro a arrastar em vidro.",
+                "Ele não corre. Ele não precisa.",
+                "Na rede neural, ele consegue cheirar o teu medo.",
+                "VOZ (SOFIA): \"FOGE!\""
+            )
+            CaveState.ESCONDER -> listOf(
+                "> Desligas os processos.",
+                "> Escuro absoluto.",
+                "Os passos passam por ti...",
+                "Param...",
+                "E continuam.",
+                "Sobreviveste. Bateria: 90%."
+            )
+            CaveState.CORRER -> listOf(
+                "> Corres pelos cabos de fibra ótica.",
+                "Sentes o calor do processador.",
+                "Ele tenta agarrar o teu sinal...",
+                "Mas és mais rápido.",
+                "Escapas. Sistema sobreaquecido."
+            )
+            CaveState.NUCLEO -> listOf(
+                "O Pilar Mestre.",
+                "Não há paredes aqui.",
+                "Apenas betão pulsante e bioluminescência.",
+                "Ela está à tua frente. Fundida com a estrutura.",
+                "Fios de cobre entram pelas suas têmporas.",
+                "VOZ (SOFIA): \"Eu sou a fundação. Eu seguro os 40 andares.\"",
+                "*O telemóvel vibra violentamente*",
+                "BANG. BANG. BANG.",
+                "Ele encontrou-te.",
+                "VOZ (SOFIA): \"Posso fazer uma coisa por ti. Só uma.\""
+            )
+            CaveState.CLIMAX -> listOf(
+                "A porta está a ceder.",
+                "*O metal range*"
+            )
+            CaveState.FINAL_A -> listOf(
+                "> DRENAR ENERGIA DO NÚCLEO?",
+                "> CONFIRMADO.",
+                "Silvo hidráulico.",
+                "As portas do lobby abrem-se lá em baixo.",
+                "VOZ (SOFIA): \"Ah... tu queres viver. Corre.\"",
+                "O telemóvel morre.",
+                "Estás no escuro, mas a saída está aberta.",
+                "[ FIM: O SOBREVIVENTE COBARDE ]"
+            )
+            CaveState.FINAL_B -> listOf(
+                "> UPLOAD PARA SERVIDOR GLOBAL...",
+                "A porta abre-se. Ele entra.",
+                "VOZ (SOFIA): \"Obrigada.\"",
+                "> UPLOAD: 100%.",
+                "Ele esmaga o telemóvel.",
+                "Mas tu já não estás lá.",
+                "A tua mente está na rede.",
+                "[ FIM: O MÁRTIR DE BETÃO ]"
+            )
+            else -> listOf()
+        }
+    }
+
+    // --- RESET DE CENA ---
+    LaunchedEffect(gameState) {
+        currentDialogueLines = loadSceneData(gameState)
+        displayedLines.clear()
+        nextLineIndex = 0
+        showOptions = false
+
+        // BOOT automático
+        if (gameState == CaveState.BOOT) {
+            loadSceneData(gameState).forEach { line ->
+                typeText(line)
+                delay(200)
+            }
+            delay(1000)
+            gameState = CaveState.INTRO
+        } else {
+            // Inicia primeira linha automaticamente
+            if (currentDialogueLines.isNotEmpty()) {
+                delay(300)
+                val line = currentDialogueLines[0]
+                nextLineIndex = 1
+                typeText(line)
+            }
+        }
+        playAmbience()
+
+        if (gameState == CaveState.FINAL_B) {
+            delay(2000)
             isFinalBCorrupted = true
         }
+    }
 
-        // Transições automáticas
-        if (gameState == CaveState.BOOT) {
-            delay(1500)
-            gameState = CaveState.INTRO
-        } else if (gameState == CaveState.ESCONDER || gameState == CaveState.CORRER) {
-            delay(3000)
-            gameState = CaveState.NUCLEO
-        } else if (gameState == CaveState.NUCLEO) {
-            delay(4000)
-            gameState = CaveState.CLIMAX
+    // --- AVANÇAR TEXTO ---
+    fun advanceText() {
+        if (isTyping || showOptions) return
+
+        if (nextLineIndex < currentDialogueLines.size) {
+            val line = currentDialogueLines[nextLineIndex]
+            nextLineIndex++
+            scope.launch { typeText(line) }
+        } else {
+            showOptions = true
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.Top
-    ) {
-        // ÁREA VISUAL
+    // --- UI ---
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        // Camada de Flash Vermelho
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .padding(bottom = 16.dp)
-                .background(Color(0xFF050505), RoundedCornerShape(8.dp))
-                .border(1.dp, Color(0xFF003300), RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .background(Color.Red.copy(alpha = redFlashAlpha.value))
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .graphicsLayer { translationX = shakeOffset.value }
         ) {
-            if (gameState == CaveState.BOOT) {
-                BootAnimation()
-            } else {
-                val imageResName = when(gameState) {
-                    CaveState.INTRO -> "cave_hand_wires"
-                    CaveState.ESCOLHA_1, CaveState.LABIRINTO -> "cave_hallway"
-                    CaveState.ROTA_A -> "cave_xray"
-                    CaveState.ROTA_B -> "cave_boots_melted"
-                    CaveState.PERSEGUICAO -> "cave_red_coat_silhouette"
-                    CaveState.NUCLEO, CaveState.CLIMAX -> "cave_sofia_face_wall"
-                    CaveState.FINAL_A -> "cave_face_petrified"
-                    CaveState.FINAL_B -> if (isFinalBCorrupted) "cave_binary_code2" else "cave_binary_code" // Troca dinâmica
-                    CaveState.FINAL_C -> "cave_building_collapse"
-                    else -> null
+            // ÁREA VISUAL
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(bottom = 16.dp)
+                    .background(Color(0xFF050505), RoundedCornerShape(8.dp))
+                    .border(1.dp, Color(0xFF004400), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (gameState == CaveState.BOOT) {
+                    BootAnimation()
+                } else {
+                    val imageResName = when(gameState) {
+                        CaveState.INTRO -> "cave_hand_wires"
+                        CaveState.ESCOLHA_1, CaveState.LABIRINTO -> "cave_hallway"
+                        CaveState.ROTA_A -> "cave_xray"
+                        CaveState.ROTA_B -> "cave_boots_melted"
+                        CaveState.PERSEGUICAO -> "cave_red_coat_silhouette"
+                        CaveState.NUCLEO, CaveState.CLIMAX -> "cave_sofia_face_wall"
+                        CaveState.FINAL_A -> "cave_face_petrified"
+                        CaveState.FINAL_B -> if (isFinalBCorrupted) "cave_binary_code2" else "cave_binary_code"
+                        CaveState.FINAL_C -> "cave_building_collapse"
+                        else -> null
+                    }
+
+                    if (imageResName != null) {
+                        val imageResId = context.resources.getIdentifier(imageResName, "drawable", context.packageName)
+                        if (imageResId != 0) {
+                            Image(
+                                painter = painterResource(id = imageResId),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))
+                            )
+                            ScanlinesOverlay()
+                        }
+                    }
+                }
+            }
+
+            // ÁREA DE TEXTO
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { advanceText() }
+            ) {
+                val listState = rememberLazyListState()
+
+                LaunchedEffect(displayedLines.size) {
+                    if (displayedLines.isNotEmpty()) listState.animateScrollToItem(displayedLines.size - 1)
                 }
 
-                if (imageResName != null) {
-                    val imageResId = context.resources.getIdentifier(imageResName, "drawable", context.packageName)
-                    if (imageResId != 0) {
-                        Image(
-                            painter = painterResource(id = imageResId),
-                            contentDescription = "Visual da Cave",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(8.dp))
-                        )
-                        ScanlinesOverlay()
-                    } else {
-                        Text("IMAGEM: $imageResName", color = Color.Red)
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(displayedLines) { index, line ->
+                        val isLastLine = index == displayedLines.size - 1
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = line,
+                                color = if (gameState == CaveState.PERSEGUICAO) Color(0xFFFF4444) else Color(0xFF00FF00),
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 16.sp,
+                                lineHeight = 22.sp,
+                                fontWeight = if (isLastLine) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .padding(vertical = 4.dp)
+                                    .alpha(if (isLastLine) 1f else 0.5f)
+                            )
+                        }
+                    }
+
+                    // Cursor a piscar na última linha (indica que está à espera)
+                    if (!showOptions && !isTyping && displayedLines.isNotEmpty() && nextLineIndex < currentDialogueLines.size) {
+                        item {
+                            val cursorAlpha by rememberInfiniteTransition(label = "cursor").animateFloat(
+                                initialValue = 0f, targetValue = 1f,
+                                animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "alpha"
+                            )
+                            Text("█", color = Color(0xFF00FF00).copy(alpha = cursorAlpha), fontSize = 16.sp)
+                        }
+                    }
+                }
+            }
+
+            // OPÇÕES
+            if (showOptions && blackoutAlpha.value == 0f) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    when (gameState) {
+                        CaveState.INTRO -> {
+                            CaveOption(">> PING: LOCALIZAR SOFIA") { gameState = CaveState.ESCOLHA_1 }
+                            CaveOption(">> DIAGNÓSTICO: AMBIENTE") { gameState = CaveState.ESCOLHA_1 }
+                        }
+                        CaveState.ESCOLHA_1 -> {
+                            CaveOption(">> ROTA A: CHEIRO A ANTISSÉTICO") { gameState = CaveState.ROTA_A }
+                            CaveOption(">> ROTA B: SOM DE MÁQUINAS") { gameState = CaveState.ROTA_B }
+                        }
+                        CaveState.ROTA_A, CaveState.ROTA_B -> {
+                            CaveOption(">> AVANÇAR") { gameState = CaveState.PERSEGUICAO }
+                        }
+                        CaveState.PERSEGUICAO -> {
+                            CaveOption(">> ESCONDER") { gameState = CaveState.ESCONDER }
+                            CaveOption(">> CORRER") { gameState = CaveState.CORRER }
+                        }
+                        CaveState.ESCONDER, CaveState.CORRER -> {
+                            LaunchedEffect(Unit) { delay(1500); gameState = CaveState.NUCLEO }
+                        }
+                        CaveState.NUCLEO -> {
+                            CaveOption(">> ESCUTAR SOFIA") { gameState = CaveState.CLIMAX }
+                        }
+                        CaveState.CLIMAX -> {
+                            CaveOption(">> /OPEN_DOORS (SACRIFÍCIO)") { gameState = CaveState.FINAL_A }
+                            CaveOption(">> /UPLOAD_DATA (VERDADE)") { gameState = CaveState.FINAL_B }
+                        }
+                        else -> {}
                     }
                 }
             }
         }
 
-        // Texto do Terminal
-        Text(
-            text = textToShow,
-            color = if (gameState == CaveState.PERSEGUICAO) Color.Red else Color(0xFF00FF00),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (isTyping) {
-            val cursorAlpha by rememberInfiniteTransition(label = "cursor").animateFloat(
-                initialValue = 0f, targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "alpha"
-            )
-            Text("█", color = Color(0xFF00FF00).copy(alpha = cursorAlpha), fontSize = 14.sp)
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Opções de Escolha
-        if (!isTyping) {
-            when (gameState) {
-                CaveState.INTRO -> {
-                    CaveOption("[PING: Tentar localizar Sofia]") { gameState = CaveState.ESCOLHA_1 }
-                    CaveOption("[DIAGNÓSTICO: Analisar o ambiente]") { gameState = CaveState.ESCOLHA_1 }
-                }
-                CaveState.ESCOLHA_1 -> {
-                    CaveOption("[ROTA A: Seguir cheiro a antissético (Clínica)]") { gameState = CaveState.ROTA_A }
-                    CaveOption("[ROTA B: Seguir som de maquinaria (Obra)]") { gameState = CaveState.ROTA_B }
-                }
-                CaveState.ROTA_A, CaveState.ROTA_B -> {
-                    CaveOption("[AVANÇAR]") { gameState = CaveState.PERSEGUICAO }
-                }
-                CaveState.PERSEGUICAO -> {
-                    CaveOption("[ESCONDER: Tentar camuflar sinal]") { gameState = CaveState.ESCONDER }
-                    CaveOption("[CORRER: Forçar conexão até ao núcleo]") { gameState = CaveState.CORRER }
-                }
-                CaveState.CLIMAX -> {
-                    CaveOption("[COMANDO: /OPEN_DOORS_EMERGENCY] (Sacrificar Sofia)") { gameState = CaveState.FINAL_A }
-                    CaveOption("[COMANDO: /UPLOAD_DATA_SERVER_PUBLIC] (Salvar a verdade)") { gameState = CaveState.FINAL_B }
-                    // CaveOption("/EXECUTE_PROTOCOL_SAMSON") { gameState = CaveState.FINAL_C } // Secreto
-                }
-                CaveState.FINAL_A, CaveState.FINAL_B, CaveState.FINAL_C -> {
+        // --- OVERLAY DE FINAL (BLACKOUT) ---
+        if (blackoutAlpha.value > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = blackoutAlpha.value))
+                    .clickable(enabled = false) {}, // Bloqueia cliques
+                contentAlignment = Alignment.Center
+            ) {
+                if (blackoutAlpha.value >= 0.9f) {
                     Text(
-                        text = "> SISTEMA DESLIGADO.",
-                        color = Color.Red,
+                        text = finalMessage,
+                        color = finalMessageColor,
                         fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(top = 16.dp)
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
-                else -> {}
             }
         }
-
-        Spacer(modifier = Modifier.height(100.dp))
     }
 }
 
-// ... (Resto das funções auxiliares CaveOption, BootAnimation, ScanlinesOverlay mantêm-se iguais) ...
+// --- FUNÇÕES AUXILIARES ---
+
 @Composable
 fun CaveOption(text: String, onClick: () -> Unit) {
     Box(
@@ -519,7 +578,6 @@ fun BootAnimation() {
             radius = 10f,
             center = center
         )
-        // Círculos concêntricos
         drawCircle(
             color = Color(0xFF00FF00).copy(alpha = alpha * 0.5f),
             radius = 30f,
